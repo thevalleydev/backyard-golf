@@ -1,0 +1,50 @@
+# Roadmap
+
+In priority order. Each step should end with `npm test` green and Brad playing it on his phone.
+
+## 0. Split into modules (no behavior change)
+See CLAUDE.md. Vite + ES modules, three pinned at 0.128. Port the smoke test to import modules directly instead of injecting exports into the IIFE.
+
+## 1. Playtest pass
+Brad plus friends play a real round. Collect: phone performance (fps, heat), swipe feel, camera annoyances, targets that are impossible or trivial, anything confusing.
+Add an optional on-screen fps/draw-call readout (hidden behind a long-press) to make this easy.
+
+## 2. Hole modifiers (biggest fun-per-effort gap)
+Holes are still three verbs (hit / through / top) on different nouns. Let the caller stack a modifier:
+- Bank shot: "off the house, then the trash can" (ordered contact list)
+- "Must bounce on the path first" (ground-type contact before the target)
+- "Over the court fence" (must pass above a height/zone)
+- "No wedge this hole" / "off hand only" (temporarily changes club or damps stats)
+- Closest-to holes (no target; nearest ball after N shots wins)
+- Carry-over ties (skins style)
+
+Store modifiers in the course log so saved courses replay them.
+
+## 3. Consequences and life
+- Broken window → the neighbor yells, the breaker loses a stroke or the victim picks the next hole
+- Something moving: a dog that runs off with a ball, a sprinkler, a kid biking the path
+- Car alarms already exist; make them matter (a stroke for hitting a car?)
+
+## 4. Real hosting
+Serve from Brad's home server over HTTPS (Caddy is simplest). This unlocks the phone-swing mode (gyro is blocked in the claude.ai viewer) and makes it installable as a PWA (add a manifest and service worker).
+
+## 5. Online multiplayer
+Everyone on their own phone in the same round. Small authoritative server (Node + WebSocket) holding game state. Clients send swing inputs; the server runs `physStep` (it's deterministic enough if you seed the RNG and fix the timestep) and broadcasts ball paths. Share a room code.
+
+## 6. More maps and a map pipeline
+The current map was traced by hand from a satellite screenshot (px polylines and polygons in `world/`). Generalize:
+- A map is a data file: roads, paths, woods, fields, houses, pools, named objects, start tee
+- Optional: pull roads, footprints, and trees from OpenStreetMap for any address, then hand-fix
+- Courses record which map they belong to (`map:'crystal-spring'` is already stored)
+
+## 7. Scorekeeper mode (small, possibly high value)
+For real-life rounds: log called holes and strokes per player, save the courses they actually play, and show running totals. No 3D. It could live inside the same app as a separate mode.
+
+## Known issues / debt
+- Stats, unlocks, and courses are per device (localStorage). A shared server would fix this.
+- Golfers can walk through objects (no pathfinding); fine for now.
+- Pads can overlap and create small steps between neighboring houses on slopes.
+- The school's roof and floors are simple boxes; windows are on the east and south faces only.
+- One house on Sea Wind is ~30 m from any road (the image was ambiguous there).
+- The south street is assumed (it isn't in the satellite image).
+- `safeCam()` is unused since fading replaced camera pull-in; delete it during the split.
