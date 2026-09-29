@@ -4,7 +4,7 @@
 // It cannot see pixels: anything visual still needs a human on a phone.
 const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path');const THREE=require('three');
 const {build}=require('esbuild');
-const html=fs.readFileSync(path.join(__dirname,'..','app.html'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 async function run(){
 const threeExports=Object.keys(THREE).filter(k=>/^[A-Za-z_$][\w$]*$/.test(k))
   .map(k=>`export const ${k}=window.THREE.${k};`).join('\n');

@@ -2,8 +2,8 @@
 
 In priority order. Each step should end with `npm test` green and Brad playing it on his phone.
 
-## 0. Split into modules (implemented; phone playtest pending)
-Vite + strictly checked TypeScript modules, three pinned at 0.128, and an imported-module smoke test replace the inline IIFE in the candidate `app.html`. Shared config, geometry/map data, terrain, collision and shot model have no browser globals; world construction, rendering, audio, game simulation/golfer, sensors/input, UI and loop are TypeScript modules. Run the smoke suite, typecheck and build; have Brad play a hole on his phone before changing game behavior or switching the published site. The root `index.html` still serves the old game for branch-based Pages; the new Pages workflow only deploys on manual dispatch after switching Pages Source to GitHub Actions.
+## 0. Split into modules (published; phone playtest pending)
+Vite + strictly checked TypeScript modules, three pinned at 0.128, and an imported-module smoke test replace the inline IIFE in `index.html`. Shared config, geometry/map data, terrain, collision and shot model have no browser globals; world construction, rendering, audio, game simulation/golfer, sensors/input, UI and loop are TypeScript modules. GitHub Pages publishes the Vite bundle automatically on `main` pushes. Browser gameplay and CI were checked; have Brad play a hole on his phone before changing game behavior.
 
 ## 1. Playtest pass
 Brad plus friends play a real round. Collect: phone performance (fps, heat), swipe feel, camera annoyances, targets that are impossible or trivial, anything confusing.
@@ -25,11 +25,11 @@ Store modifiers in the course log so saved courses replay them.
 - Something moving: a dog that runs off with a ball, a sprinkler, a kid biking the path
 - Car alarms already exist; make them matter (a stroke for hitting a car?)
 
-## 4. Real hosting
-Serve from Brad's home server over HTTPS (Caddy is simplest). This unlocks the phone-swing mode (gyro is blocked in the claude.ai viewer) and makes it installable as a PWA (add a manifest and service worker).
+## 4. Installable PWA
+GitHub Pages already serves the game over HTTPS, enabling browser motion permissions. Add a manifest and service worker if offline play or home-screen installation is needed.
 
 ## 5. Online multiplayer
-Everyone on their own phone in the same round. Small authoritative server (Node + WebSocket) holding game state. Clients send swing inputs; the server runs `physStep` (it's deterministic enough if you seed the RNG and fix the timestep) and broadcasts ball paths. Share a room code.
+Everyone on their own phone in the same round. Small authoritative server (Node + WebSocket) holding game state. Clients send swing inputs; the server runs `physStep` (it's deterministic enough if you seed the RNG and fix the timestep) and broadcasts ball paths. Share a room code. The Pages client can remain static; a separately hosted service (such as Render) would handle live rooms.
 
 ## 6. More maps and a map pipeline
 The current map was traced by hand from a satellite screenshot (px polylines and polygons in `world/`). Generalize:
@@ -47,4 +47,4 @@ For real-life rounds: log called holes and strokes per player, save the courses 
 - The school's roof and floors are simple boxes; windows are on the east and south faces only.
 - One house on Sea Wind is ~30 m from any road (the image was ambiguous there).
 - The south street is assumed (it isn't in the satellite image).
-- `safeCam()` is unused since fading replaced camera pull-in; delete it during the split.
+- `safeCam()` is unused since fading replaced camera pull-in; remove it when revisiting camera code.

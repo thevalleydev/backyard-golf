@@ -13,13 +13,13 @@ Read this whole file before changing anything. Then read `docs/ROADMAP.md` for w
 
 ## Current state (0.1 alpha)
 
-The published branch entry `index.html` remains the original single-file game (Three.js **r128** from cdnjs). The modular candidate is `app.html` plus `src/`: Vite bundles Three.js r128 from npm and publishes `dist/index.html` only when Pages Source switches to Actions and the workflow is manually dispatched. All application code in `src/` is strictly checked TypeScript, including world construction (`src/world.ts`) and UI/turns (`src/ui.ts`). The imported-module smoke suite covers gameplay and storage compatibility, not rendered pixels or real phone controls.
+The published entry `index.html` loads `src/main.ts`: Vite bundles Three.js **r128** from npm and publishes `dist/index.html` through GitHub Actions on pushes to `main`. All application code in `src/` is strictly checked TypeScript, including world construction (`src/world.ts`) and UI/turns (`src/ui.ts`). The imported-module smoke suite covers gameplay and storage compatibility, not rendered pixels or real phone controls.
 
 It works end to end: setup → call a hole by tapping the map → aim → swipe to swing → physics → scoring → next hole → final scorecard → save/replay courses.
 
 The imported-module smoke test passes (`npm test`), but it can't see pixels. Visual/feel issues have only ever been found by Brad on his phone.
 
-### First job: playtest the modular candidate (before any big feature)
+### First job: playtest the modular game on a phone (before any big feature)
 
 The original single file was edited by search-and-replace for weeks. Several real bugs came from that (the golfer was accidentally deleted from the scene; the school walls got shifted off their windows by a botched string slice). The first split is complete in `src/`; the finer-grained layout below remains a longer-term goal:
 
@@ -39,9 +39,9 @@ src/
 
 Keep three at **0.128** until you've checked the breaking changes (`LuminanceFormat` for the toon gradient, `Quaternion.invert`, `instanceColor`, geometry APIs). Upgrading is fine later, just not in the same change as the split.
 
-The modular candidate preserves gameplay and storage keys; run the smoke test and build, and have Brad play one hole before touching behavior.
+The modular game preserves gameplay and storage keys; run the smoke test and build, and have Brad play one hole before touching behavior.
 
-## Architecture (what's in index.html, top to bottom)
+## Architecture (modules in `src/`)
 
 | Area | Key names | Notes |
 |---|---|---|
@@ -84,7 +84,7 @@ The modular candidate preserves gameplay and storage keys; run the smoke test an
 
 ```
 npm ci
-npm run dev       # open /app.html; gyro needs HTTPS
+npm run dev       # open the Vite URL; gyro needs HTTPS
 npm test          # headless smoke test (jsdom + three@0.128)
 npm run build     # strict TS check + Pages production bundle in dist/
 ```
