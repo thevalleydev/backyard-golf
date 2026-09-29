@@ -294,7 +294,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
 $('stage').appendChild(renderer.domElement);
 const scene=new THREE.Scene(); const SKY=0xa9dcf0;
-scene.background=new THREE.Color(SKY); scene.fog=new THREE.Fog(SKY,90,260);
+scene.background=new THREE.Color(SKY); scene.fog=new THREE.Fog(SKY,180,500);
 const camera=new THREE.PerspectiveCamera(62,1,0.1,450);
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize); resize();
@@ -885,10 +885,15 @@ const EMPTY=[];const near=p=>GRID.get(pkey(Math.floor(p.x/GC),Math.floor(p.z/GC)
 /* ---------- sound (Web Audio synth) ---------- */
 const SFX={ctx:null,on:true,last:new Map()};
 const MATSND={cars:'metal',grills:'metal',sheds:'wood',hoops:'metal',fences:'wood',playsets:'wood',kiddie:'plastic',gardens:'wood',cwall:'wood',cornhole:'wood',tire:'soft',houses:'wood',court:'metal',bench:'wood',trash1:'metal',trash2:'metal',psign:'wood',oak:'wood',picnic:'wood',goal:'metal',school:'wood',slide:'plastic',swings:'metal',dome:'metal',seesaw:'metal',monkey:'metal',tramp:'boing',flamingo:'plastic',gnome:'plastic',mail:'metal',stop:'metal',soda:'can',pizza:'soft',pools:'plastic'};
-function audioInit(){try{if(!SFX.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;SFX.ctx=new AC();
+function audioInit(){if(!SFX.on)return;
+  try{if(!SFX.ctx){const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){toast('Sound unavailable','This browser does not support Web Audio',2000);return;}
+    SFX.ctx=new AC();
     SFX.master=SFX.ctx.createGain();SFX.master.gain.value=0.7;SFX.master.connect(SFX.ctx.destination);
     const n=SFX.ctx.sampleRate,b=SFX.ctx.createBuffer(1,n,n),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;SFX.noise=b;}
-  if(SFX.ctx.state==='suspended')SFX.ctx.resume();}catch(e){}}
+    if(SFX.ctx.state!=='running')SFX.ctx.resume().catch(e=>{console.error('Audio resume failed',e);toast('Sound blocked','Tap the sound button to retry',2200);});
+  }catch(e){console.error('Audio setup failed',e);toast('Sound unavailable','Could not start audio on this device',2200);}}
+addEventListener('pointerdown',()=>{if(SFX.on&&SFX.ctx&&SFX.ctx.state!=='running')audioInit();},{capture:true});
 function env(g,t,a,peak,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec);}
 function tone(type,f0,f1,dur,vol,delay=0){const c=SFX.ctx,t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);
   if(f1)o.frequency.exponentialRampToValueAtTime(f1,t+dur);env(g,t,0.004,vol,dur);o.connect(g);g.connect(SFX.master);o.start(t);o.stop(t+dur+0.05);}
@@ -898,6 +903,7 @@ function noise(dur,vol,ft,f0,f1,q=1,delay=0){const c=SFX.ctx,t=c.currentTime+del
 function sfx(kind,k=1){if(!SFX.on||!SFX.ctx)return;k=Math.min(1,Math.max(0.15,k));try{switch(kind){
   case 'swing':noise(0.2,0.22,'bandpass',500,2600,1.2);tone('square',1500,900,0.035,0.12*k,0.09);tone('sine',220,120,0.08,0.35*k,0.09);break;
   case 'grass':tone('sine',110,55,0.12,0.35*k);noise(0.06,0.12*k,'lowpass',600);break;
+  case 'thunk':tone('sine',150,65,0.16,0.3*k);noise(0.07,0.12*k,'lowpass',500);break;
   case 'metal':[1,2.76,5.4].forEach((m,i)=>tone('sine',720*m,null,0.6/(i+1),0.16*k/(i+1)));break;
   case 'can':tone('triangle',1800,1400,0.15,0.2*k);tone('sine',900,null,0.2,0.12*k);break;
   case 'wood':tone('triangle',320,220,0.09,0.4*k);noise(0.04,0.15*k,'bandpass',1500,null,2);break;
@@ -914,7 +920,7 @@ function sfx(kind,k=1){if(!SFX.on||!SFX.ctx)return;k=Math.min(1,Math.max(0.15,k)
   case 'path':tone('square',1100,700,0.03,0.12*k);tone('sine',300,150,0.05,0.25*k);break;
   case 'alarm':for(let i=0;i<8;i++)tone('square',i%2?880:660,null,0.17,0.07,i*0.19);break;
   case 'win':[523,659,784,1047].forEach((f,i)=>tone('triangle',f,null,0.22,0.18,i*0.09));break;
-}}catch(e){}}
+}}catch(e){console.error('Sound effect failed',e);}}
 function hitSound(key,kind,imp){const now=performance.now();if(now-(SFX.last.get(key)||0)<90)return;SFX.last.set(key,now);sfx(kind,imp/12);}
 
 /* ---------- collision ---------- */
@@ -1053,7 +1059,7 @@ function bump(k,n=1){TALLY[k]=(TALLY[k]||0)+n;try{localStorage.setItem('byg_stat
 function offPose(pose,s,w){ // arm direction from the shoulder in the golfer's frame (+z toward the ball). s: -1 trail side, +1 lead side
   if(pose==='raise')return new V(s*0.25,0.4+w*0.06,0.88);if(pose==='front')return new V(-s*0.15,-0.25+w*0.05,0.95);
   if(pose==='phone')return new V(-s*0.22,0.05+w*0.02,0.95);return new V(-s*0.3,-0.8,-0.5);}
-function makeGolfer(){const K={g:new THREE.Group(),props:{},addr:0.25,offSide:1,swingT:-1,swingFrom:0,eatT:-1,eatIn:3+Math.random()*8,walkPh:0,dest:null,ph:Math.random()*6,base:0};const g=K.g;
+function makeGolfer(){const K={g:new THREE.Group(),props:{},addr:0.25,offSide:1,swingT:-1,swingFrom:0,tripT:-1,tripWait:0,eatT:-1,eatIn:3+Math.random()*8,walkPh:0,dest:null,ph:Math.random()*6,base:0};const g=K.g;
   K.legs=[-0.14,0.14].map(x=>{const hip=new THREE.Group();hip.position.set(x,0.47,0);g.add(hip);part(CY(0.11,0.12,0.4,8),0x2c3e66,hip,0,-0.22,0,0.045);part(BX(0.19,0.1,0.3),0x1d1a16,hip,0,-0.42,0.05,0.03);return hip;});
   K.shirt=part(CY(0.3,0.35,0.55,12),0xff5a36,g,0,0.74,0,0.045);
   part(IC(0.43),0xffd9b3,g,0,1.3,0,0.045);
@@ -1078,14 +1084,18 @@ function consume(p){const def=PROPDEF[p.prop];
   else if(def.use==='bite'){p.food-=0.17;sfx('bite');if(p.food<0.3){p.eaten++;p.food=1;bump({hotdog:'dogs',pizza:'slices'}[p.prop]||'bites');}applyFood(p);}}
 function addressOf(p,ball,yaw){const L=new V(Math.cos(yaw),0,-Math.sin(yaw)),rh=p.stance==='R',sg=rh?1:-1;
   return{pos:new V(ball.x+L.x*0.75*sg,ball.y-R,ball.z+L.z*0.75*sg),ry:rh?yaw-Math.PI/2:yaw+Math.PI/2,sx:rh?1:-1};}
-function placeKid(p,ball,yaw){const a=addressOf(p,ball,yaw),g=p.k.g;g.position.copy(a.pos);g.rotation.y=a.ry;g.scale.x=a.sx;p.k.dest=null;p.k.legs.forEach(l=>l.rotation.x=0);}
+function placeKid(p,ball,yaw){const a=addressOf(p,ball,yaw),g=p.k.g;g.position.copy(a.pos);g.rotation.x=0;g.rotation.y=a.ry;g.scale.x=a.sx;p.k.dest=null;p.k.tripT=-1;p.k.legs.forEach(l=>l.rotation.x=0);}
 function walkTo(p,yaw,delay=0){p.k.dest=addressOf(p,p.ball,yaw);p.k.walkDelay=delay;}
 const angLerp=(a,b,t)=>{let d=((b-a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;return a+d*t;};
 function stepGolfer(p,dt){const K=p.k,g=K.g;
   if(K.swingT>=0){K.swingT=Math.min(1,K.swingT+dt/0.22);const e=1-Math.pow(1-K.swingT,3);K.clubPivot.rotation.z=K.swingFrom+(2.9-K.swingFrom)*e;g.rotation.y=K.base+g.scale.x*0.45*Math.sin(e*Math.PI/2);if(K.swingT>=1)K.swingT=-1;}
-  if(K.dest&&K.swingT<0){if(K.walkDelay>0){K.walkDelay-=dt;}else{const d=K.dest.pos,dx=d.x-g.position.x,dz=d.z-g.position.z,dist=Math.hypot(dx,dz),sp=(p===cp()&&G.phase==='aim')?12:5.5;
+  if(K.tripT>=0){K.tripT+=dt;g.rotation.x=1.25*Math.sin(Math.PI*Math.min(1,K.tripT/1.1));K.legs[0].rotation.x=0.5;K.legs[1].rotation.x=-0.5;
+    if(K.tripT>=1.1){K.tripT=-1;g.rotation.x=0;K.legs.forEach(l=>l.rotation.x=0);}}
+  else if(K.dest&&K.swingT<0){if(K.walkDelay>0){K.walkDelay-=dt;}else{const d=K.dest.pos,dx=d.x-g.position.x,dz=d.z-g.position.z,dist=Math.hypot(dx,dz),sp=(p===cp()&&G.phase==='aim')?12:5.5;
     if(dist<0.06){const D=K.dest;K.dest=null;g.position.copy(D.pos);g.rotation.y=D.ry;g.scale.x=D.sx;K.legs.forEach(l=>l.rotation.x=0);K.clubPivot.rotation.z=K.addr;}
-    else{const st=Math.min(dist,sp*dt);g.position.x+=dx/dist*st;g.position.z+=dz/dist*st;g.position.y=H(g.position.x,g.position.z);g.scale.x=K.dest.sx;
+    else if(G.phase==='call'||G.phase==='between'){K.tripWait=Math.max(0,K.tripWait-dt);
+      if(K.tripWait===0&&Math.random()<dt*0.2){K.tripT=0;K.tripWait=3;sfx('thunk',0.25);}}
+    if(K.tripT<0&&dist>=0.06){const st=Math.min(dist,sp*dt);g.position.x+=dx/dist*st;g.position.z+=dz/dist*st;g.position.y=H(g.position.x,g.position.z);g.scale.x=K.dest.sx;
       g.rotation.y=angLerp(g.rotation.y,dist<0.8?K.dest.ry:Math.atan2(dx,dz)*1+(g.scale.x<0?0:0),Math.min(1,dt*10));
       K.walkPh+=st*3.4;K.legs[0].rotation.x=Math.sin(K.walkPh)*0.7;K.legs[1].rotation.x=-Math.sin(K.walkPh)*0.7;K.clubPivot.rotation.z=K.addr+Math.sin(K.walkPh)*0.25;}}}
   if(K.eatT>=0){const pr=K.eatT;K.eatT+=dt;if(pr<0.7&&K.eatT>=0.7)consume(p);if(K.eatT>1.4)K.eatT=-1;}
@@ -1156,7 +1166,7 @@ function saveCourse(inp){const holes=G.log.filter(Boolean);if(!holes.length){toa
   toast(storeCourses(cs)?'Course saved':'Could not save',`${name} · ${holes.length} holes`,1500);$(inp).value='';}
 $('saveBtn1').onclick=()=>saveCourse('saveName1');$('saveBtn2').onclick=()=>saveCourse('saveName2');
 renderCourses();
-$('startBtn').onclick=()=>{ctrlUI();resetSwingBtn();audioInit();
+$('startBtn').onclick=()=>{ctrlUI();resetSwingBtn();audioInit();sfx('can',0.3);
   if(G.ctrl==='phone'){ // iOS needs the permission prompt inside this tap
     let pr;try{pr=(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')?DeviceMotionEvent.requestPermission():Promise.resolve(typeof DeviceMotionEvent!=='undefined'?'granted':'denied');}catch(e){pr=Promise.resolve('denied');}
     pr.then(r=>{if(r!=='granted')motionFallback('Motion access was denied');}).catch(()=>motionFallback('Motion access is blocked here'));
@@ -1258,7 +1268,7 @@ function playRule(o,r,modifier=null,lead=null){if(G.picking)endPick();pendingMod
 function courseHole(){ // replaying a saved course: same target, same rule, same tee spot
   const h=G.course.holes[G.hole-1],o=OBJS.find(x=>x.id===h.id);if(!o){toast('Missing target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
   if((h.modifier==='bounce'&&!h.lead)||(h.lead&&!OBJS.some(x=>x.id===h.lead.id&&(h.lead.sub==null||x.members&&x.members[h.lead.sub])))){toast('Missing first target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
-  const n=G.players.length;G.players.forEach((p,i)=>{p.ball.set(h.tee[0]+teeOffset(i,n),0,h.tee[1]);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);{const oc=o.members?o.members[h.sub??0].c:o.center;placeKid(p,p.ball,Math.atan2(oc.x-p.ball.x,oc.z-p.ball.z));}});
+  const n=G.players.length;G.players.forEach((p,i)=>{p.ball.set(h.tee[0]+teeOffset(i,n),0,h.tee[1]);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);{const oc=o.members?o.members[h.sub??0].c:o.center;walkTo(p,Math.atan2(oc.x-p.ball.x,oc.z-p.ball.z));}});
   G.target=o;G.targetSub=h.sub??null;const list=G.targetSub!=null?o.subRules(o.members[G.targetSub]):o.rules,r=list[h.ri]||list[0];
   G.preview=o;marker.visible=true;show('hud',false);show('controls',false);show('call',false);
   toast(`Hole ${G.hole} of ${G.holes}`,`${o.emoji} ${G.targetSub!=null?o.members[G.targetSub].name:o.name}: ${r.label}${MODIFIERS[h.modifier]?' · '+modifierText(h.modifier,h.lead):''}`,2200);
@@ -1288,7 +1298,7 @@ function beginTurn(){
 function startAim(){
   const p=cp(),t=tgt(G.target,p.ball).c;G.phase='aim';G.map=false;$('mapBtn').textContent='🗺️';
   G.yaw=Math.atan2(t.x-p.ball.x,t.z-p.ball.z);swingT=-1;if(p.loft==null)p.loft=CLUBS[p.club].base;updateLoft();
-  dressKid(p);if(p.k.dest||p.k.g.position.distanceTo(addressOf(p,p.ball,G.yaw).pos)>0.3)walkTo(p,G.yaw);else placeKid(p,p.ball,G.yaw);p.k.clubPivot.rotation.z=p.k.addr;
+  p.k.tripT=-1;p.k.g.rotation.x=0;dressKid(p);if(p.k.dest||p.k.g.position.distanceTo(addressOf(p,p.ball,G.yaw).pos)>0.3)walkTo(p,G.yaw);else placeKid(p,p.ball,G.yaw);p.k.clubPivot.rotation.z=p.k.addr;
   show('controls',true);resetSwingBtn();updateHUD();showZone();
   if(G.players.length>1)toast(`${p.name} up`,`${CLUBS[p.club].name} · stroke ${p.strokes+1}`,1000);
 }
@@ -1354,7 +1364,7 @@ function teeUp(o){ // everyone restarts from one spot a few steps off the last t
         for(const k of near(point))if(k.kind!=='leaf'&&!k.off&&collide(k,point))return false;
       return true;});
     if(clear)break;}
-  G.players.forEach((p,i)=>{p.ball.copy(spot).addScaledVector(side,teeOffset(i,n));p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);placeKid(p,p.ball,yaw);});
+  G.players.forEach((p,i)=>{p.ball.copy(spot).addScaledVector(side,teeOffset(i,n));p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);walkTo(p,yaw);});
 }
 // Once someone holes out in N, anyone who has already taken N strokes can't tie: they lose the hole at N+1 and stop playing it.
 function settleHole(){const won=G.players.filter(p=>p.won);if(!won.length)return[];const best=Math.min(...won.map(p=>p.card[G.hole-1])),out=[];
@@ -1379,7 +1389,7 @@ function tableHTML(){
 }
 function totals(){return G.players.map(p=>p.card.reduce((a,b)=>a+(b||0),0));}
 $('cardBtn').onclick=()=>{$('saveName1').parentNode.style.display=G.course?'none':'flex';$('cardTbl').innerHTML=tableHTML();show('cardModal',true);};
-$('muteBtn').onclick=()=>{SFX.on=!SFX.on;$('muteBtn').textContent=SFX.on?'🔊':'🔇';audioInit();};
+$('muteBtn').onclick=()=>{SFX.on=!SFX.on;$('muteBtn').textContent=SFX.on?'🔊':'🔇';audioInit();if(SFX.on)sfx('can',0.3);};
 $('closeCard').onclick=()=>show('cardModal',false);
 $('skipBtn').onclick=()=>{show('cardModal',false);if(G.phase!=='aim')return;G.players.forEach(p=>{if(!p.done){p.done=true;p.card[G.hole-1]=p.strokes;}});endHole();};
 $('endBtn').onclick=()=>{show('cardModal',false);showFinal();};
@@ -1558,6 +1568,7 @@ function updateCamera(dt){
   const a=1-Math.exp(-dt*k);camPos.lerp(dp,a);camLook.lerp(dl,a);
   if(close)camPos.y=Math.max(camPos.y,H(camPos.x,camPos.z)+0.4);
   camera.position.copy(camPos);camera.lookAt(camLook);
+  CLOUDS.forEach(c=>{c.visible=camPos.y<42;});
   if(close)updateOcclusion(true,camPos,F);
   else if(G.phase==='call'&&G.preview&&!G.picking)updateOcclusion(true,camPos,camLook);
   else updateOcclusion(false);

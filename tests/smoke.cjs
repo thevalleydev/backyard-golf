@@ -5,7 +5,7 @@
 const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path');const THREE=require('three');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const EXPORTS='G,OBJS,TREES,GLASS,HL,swing,simStep,updateVisuals,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
+const EXPORTS='G,OBJS,TREES,GLASS,HL,CLOUDS,SFX,audioInit,swing,simStep,stepGolfer,updateVisuals,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
 let fails=0;const ok=(c,m)=>{console.log((c?'  ok  ':'  FAIL')+'  '+m);if(!c)fails++;};
 function boot(){
   const dom=new JSDOM(html.replace(/<script src=[^>]+><\/script>/,'').replace(/<script>[\s\S]*?<\/script>/,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'https://localhost/'});
@@ -42,6 +42,10 @@ ok(X.HL.every(h=>corners(h).every(([x,z])=>X.roadSurf(x,z)>0.3&&X.pathDist(x,z)>
  const rc=new THREE.Raycaster();let worst=-9;for(let x=-200;x<160;x+=3.1)for(let z=-160;z<165;z+=3.1){if(X.roadSurf(x,z)>-0.3)continue;rc.set(new THREE.Vector3(x,50,z),new THREE.Vector3(0,-1,0));
    const a=rc.intersectObject(terrain)[0],b=rc.intersectObject(road)[0];if(a&&b)worst=Math.max(worst,a.point.y-b.point.y);}
  ok(worst<0.02,`grass never pokes through roads (depth bias covers <2 cm) (worst ${worst.toFixed(3)} m)`);}
+{const zoom=G.zoom;G.pan=new THREE.Vector3();G.picking=true;G.zoom=170;X.updateCamera(3);
+ ok(X.scene.fog.far>=X.camera.far&&X.CLOUDS.every(c=>!c.visible),'far overhead camera can see through clouds and fog');
+ G.picking=false;G.zoom=zoom;X.updateCamera(3);
+ ok(X.CLOUDS.every(c=>c.visible),'clouds return below the cloud layer');}
 
 console.log('play');
 d.getElementById('startBtn').click();
@@ -52,17 +56,38 @@ ok(G.phase==='aim','hole starts');ok(d.getElementById('hCall').textContent==='Br
 X.swing(0.6);fly(X);ok(G.phase!=='flight','shot resolves');
 
 console.log('multiplayer tees');
-{const {d:d2,X:X2}=boot();d2.getElementById('addP').click();d2.getElementById('addP').click();d2.getElementById('startBtn').click();
+{const {w:w2,d:d2,X:X2}=boot();d2.getElementById('addP').click();d2.getElementById('addP').click();d2.getElementById('startBtn').click();
  const players=X2.G.players,spacing=()=>Math.min(...players.flatMap((p,i)=>players.slice(i+1).map(q=>Math.hypot(p.k.g.position.x-q.k.g.position.x,p.k.g.position.z-q.k.g.position.z))));
  const clear=()=>players.every(p=>!X2.near(p.ball).some(c=>c.kind!=='leaf'&&!c.off&&X2.collide(c,p.ball))&&
    ![0.8,1.3].some(y=>{const point=p.k.g.position.clone().add(new THREE.Vector3(0,y,0));return X2.near(point).some(c=>c.kind!=='leaf'&&!c.off&&X2.collide(c,point));}));
  ok(players.length===4&&spacing()>1.5,'four golfers stand apart on the first hole');
  ok(clear(),'first tee keeps all four balls and golfers clear of obstacles');
  const court=X2.OBJS.find(o=>o.id==='court');X2.teeUp(court);
- ok(spacing()>1.5&&players.every(p=>!p.k.dest),'four golfers immediately stand apart at the next tee');
- ok(clear(),'new tees keep every ball and golfer clear of obstacles');
+ ok(players.every(p=>p.k.dest),'golfers run to the spaced next tee');
+ ok(players.every(p=>!X2.near(p.ball).some(c=>c.kind!=='leaf'&&!c.off&&X2.collide(c,p.ball))),'new tee balls stay clear of obstacles');
+ const runner=players[0];runner.k.g.position.copy(runner.k.dest.pos).add(new THREE.Vector3(0,0,5));
+ const random=w2.Math.random;w2.Math.random=()=>0;X2.stepGolfer(runner,0.05);w2.Math.random=random;
+ ok(runner.k.tripT>=0&&runner.k.dest,'running golfer sometimes trips without losing their destination');
+ X2.stepGolfer(runner,0.4);ok(runner.k.g.rotation.x>0.4,'trip visibly tips the golfer forward');
+ X2.stepGolfer(runner,0.7);ok(runner.k.tripT<0&&Math.abs(runner.k.g.rotation.x)<0.01,'golfer recovers and can finish running');
+ players.forEach(p=>{p.k.g.position.copy(p.k.dest.pos);X2.stepGolfer(p,0.02);});
+ ok(spacing()>1.5&&clear(),'four golfers stand apart at a clear next tee');
  X2.G.course={holes:[{id:'court',sub:null,ri:0,tee:[players[0].ball.x+2.7,players[0].ball.z]}]};X2.G.hole=1;X2.courseHole();
- ok(spacing()>1.5&&players.every(p=>!p.k.dest),'saved-course replay immediately spaces the golfers');}
+ ok(players.every(p=>p.k.dest),'saved-course replay also lets golfers run to their tees');
+ players.forEach(p=>{p.k.g.position.copy(p.k.dest.pos);X2.stepGolfer(p,0.02);});
+ ok(spacing()>1.5,'saved-course replay keeps golfers apart after arrival');}
+
+console.log('mobile audio');
+{const {w:w2,X:X2}=boot();let resumes=0;
+ w2.AudioContext=class{constructor(){this.state='suspended';this.sampleRate=8000;this.destination={};}
+   createGain(){return{gain:{value:0},connect(){}};}
+   createBuffer(){return{getChannelData:()=>new Float32Array(8000)};}
+   resume(){resumes++;this.state='running';return Promise.resolve();}};
+ X2.audioInit();ok(resumes===1&&X2.SFX.ctx.state==='running','audio context resumes on first gesture');
+ X2.SFX.ctx.state='interrupted';w2.dispatchEvent(new w2.Event('pointerdown'));
+ ok(resumes===2&&X2.SFX.ctx.state==='running','later gesture resumes mobile-interrupted audio');
+ X2.SFX.on=false;X2.SFX.ctx.state='interrupted';w2.dispatchEvent(new w2.Event('pointerdown'));
+ ok(resumes===2,'muted audio does not resume');}
 
 console.log('swipe');
 {const zone=d.getElementById('swingZone');let now=5000;w.performance.now=()=>now;
