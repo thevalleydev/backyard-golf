@@ -29,6 +29,7 @@
 - **Courses:** save the exact sequence of holes (target, rule, tee spot) and replay it later.
 - **Multiplayer tees:** stage golfers 1.8 m apart around the tee spot on the first hole, later holes, and saved-course replays. New tees must clear every ball and golfer, not just the center.
 - Golfers run to later tees and can occasionally trip and recover; the next player regains control before addressing the ball. Wide overhead views hide overhead cloud meshes and use a longer fog range to keep far targets visible.
+- Trees fade when their canopies, trunks, or near-camera trunks block the shot view; this changes rendering only, not ball collision.
 - **Shot challenges:** after choosing a rule, the caller can select any solid nearby object (within 60 m) to bank off, select one to bounce on top of, or require a path landing before the target on the same shot. The object picker opens on the map with highlighted targets and four quick choices; the complete list is optional. A first-contact notification confirms the requirement was met. Each shot starts with the requirement unmet; saved courses replay the selected object. Legacy saved house-bank calls still work.
 
 ## Controls

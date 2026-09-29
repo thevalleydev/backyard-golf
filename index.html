@@ -1550,7 +1550,8 @@ function updateOcclusion(on,A,B){const nT=new Set(),nK=new Set();
     for(let i=0;i<=n;i++){const cx=Math.floor((A.x+dx*i/n)/GC),cz=Math.floor((A.z+dz*i/n)/GC);for(let ox=-1;ox<=1;ox++)for(let oz=-1;oz<=1;oz++)cells.add(pkey(cx+ox,cz+oz));}
     for(const k of cells)for(const c of (GRID.get(k)||EMPTY)){
       if(c.ti!=null){if(nT.has(c.ti))continue;const t=TREES[c.ti];
-        if(segD(A,B,tmpT.set(t.x,t.y+t.th+t.r*0.55,t.z))<t.r+0.5||segD(A,B,tmpT.set(t.x,t.y+t.th*0.5,t.z))<0.9)nT.add(c.ti);continue;}
+        const nearTrunk=Math.hypot(A.x-t.x,A.z-t.z)<3&&A.y>t.y-0.2&&A.y<t.y+t.th+0.5;
+        if(nearTrunk||segD(A,B,tmpT.set(t.x,t.y+t.th+t.r*0.55,t.z))<t.r+0.5||segD(A,B,tmpT.set(t.x,t.y+t.th*0.5,t.z))<0.9)nT.add(c.ti);continue;}
       if(!c.obj||c.thru)continue;const key=c.fk||(c.obj.members?null:c.obj.id);
       if(!key||nK.has(key))continue;if(segHits(c,A,B))nK.add(key);}}
   let dirty=false;hidT.forEach(i=>{if(!nT.has(i)){setTree(i,true);dirty=true;}});nT.forEach(i=>{if(!hidT.has(i)){setTree(i,false);dirty=true;}});

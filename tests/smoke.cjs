@@ -5,7 +5,7 @@
 const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path');const THREE=require('three');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const EXPORTS='G,OBJS,TREES,GLASS,HL,CLOUDS,SFX,audioInit,swing,simStep,stepGolfer,updateVisuals,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
+const EXPORTS='G,OBJS,TREES,GLASS,HL,CLOUDS,SFX,ghosts,audioInit,swing,simStep,stepGolfer,updateVisuals,updateOcclusion,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
 let fails=0;const ok=(c,m)=>{console.log((c?'  ok  ':'  FAIL')+'  '+m);if(!c)fails++;};
 function boot(){
   const dom=new JSDOM(html.replace(/<script src=[^>]+><\/script>/,'').replace(/<script>[\s\S]*?<\/script>/,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'https://localhost/'});
@@ -46,6 +46,14 @@ ok(X.HL.every(h=>corners(h).every(([x,z])=>X.roadSurf(x,z)>0.3&&X.pathDist(x,z)>
  ok(X.scene.fog.far>=X.camera.far&&X.CLOUDS.every(c=>!c.visible),'far overhead camera can see through clouds and fog');
  G.picking=false;G.zoom=zoom;X.updateCamera(3);
  ok(X.CLOUDS.every(c=>c.visible),'clouds return below the cloud layer');}
+{const i=X.TREES.findIndex(t=>t.th>3.5&&t.r<3),tree=X.TREES[i],eye=new THREE.Vector3(tree.x+2.4,tree.y+1,tree.z),ball=eye.clone().add(new THREE.Vector3(3,0,0));
+ X.updateOcclusion(true,eye,ball);
+ ok(X.ghosts.has(i),'a trunk near the camera fades even if the ball is beside it');
+ const trunk=X.near(new THREE.Vector3(tree.x,tree.y+1,tree.z)).find(c=>c.ti===i&&c.kind==='cyl');
+ ok(!!trunk&&!!X.collide(trunk,new THREE.Vector3(tree.x+0.2,tree.y+1,tree.z)),'faded trunk still collides with the ball');
+ const clearEye=eye.clone().add(new THREE.Vector3(1.5,0,0));
+ X.updateOcclusion(true,clearEye,clearEye.clone().add(new THREE.Vector3(3,0,0)));
+ ok(!X.ghosts.has(i),'tree returns to solid when the camera moves away');}
 
 console.log('play');
 d.getElementById('startBtn').click();
