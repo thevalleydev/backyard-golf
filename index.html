@@ -86,10 +86,17 @@ h2.display{font-size:30px;margin:0 0 10px}
 .secHead{grid-column:1/-1;font-size:13px;color:var(--muted);margin:6px 0 -2px}
 .grid button span{display:block;font-size:22px;margin-bottom:2px}
 .grid button.on{background:var(--paper2);outline:3px solid var(--accent);outline-offset:-1px}
-#ruleList{margin-top:10px;display:grid;gap:7px}
-#ruleList button{text-align:left;box-shadow:0 4px 0 var(--line);background:var(--go);color:#fff;font-size:18px;padding:12px}
+#ruleList,#modifierList,#leadList{margin-top:10px;display:grid;gap:7px}
+#ruleList button,#modifierList button,#leadList button{text-align:left;box-shadow:0 4px 0 var(--line);background:var(--go);color:#fff;font-size:18px;padding:12px}
 #ruleList button.on{background:var(--accent);color:#fff}
-#ruleList small{display:block;font-weight:700;opacity:.8;font-size:12.5px}
+#ruleList small,#modifierList small,#leadList small{display:block;font-weight:700;opacity:.8;font-size:12.5px}
+#leadPins{position:fixed;inset:0;z-index:14;pointer-events:none}
+#leadPins button{position:absolute;transform:translate(-50%,-50%);width:42px;height:42px;padding:0;border:3px solid var(--line);
+  border-radius:50%;background:var(--accent);font-size:22px;box-shadow:2px 3px 0 var(--line);pointer-events:auto}
+#leadQuick{display:flex;gap:7px;align-items:center;max-width:680px;margin:0 auto 10px;pointer-events:auto}
+#leadQuickList{display:flex;gap:7px;overflow-x:auto;min-width:0;flex:1;padding:2px 3px 5px}
+#leadQuickList button{flex:0 0 auto;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--go);color:#fff;padding:8px 10px;font-size:13px}
 
 /* hud */
 #hud{position:fixed;top:0;left:0;right:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 0;pointer-events:none}
@@ -196,12 +203,22 @@ td.tot{font-family:'Luckiest Guy','Arial Black',Impact,sans-serif;font-weight:40
   <div id="ruleView" class="hidden">
     <button id="backBtn" class="sm">‹ Back to the map</button>
     <div id="ruleList"></div>
+    <div id="modifierView" class="hidden">
+      <div class="secHead">Add a shot challenge</div>
+      <div id="modifierList"></div>
+    </div>
+    <div id="leadView" class="hidden">
+      <div class="secHead">Pick something nearby to hit first</div>
+      <div id="leadList"></div>
+    </div>
   </div>
 </div>
 
+<div id="leadPins" class="hidden"></div>
 <div id="pickBar" class="hidden">
   <div class="pickTip" id="pickTip">Tap anything to target it</div><div class="pickSub">Drag to pan · pinch to zoom</div>
-  <div class="ctrlRow"><button id="zoomIn" class="icon" aria-label="Zoom in">＋</button><button id="zoomOut" class="icon" aria-label="Zoom out">－</button><button id="pickRnd" class="icon">🎲 Surprise</button></div>
+  <div id="leadQuick" class="hidden"><div id="leadQuickList"></div><button id="allNearby" class="sm">All nearby</button></div>
+  <div class="ctrlRow"><button id="pickBack" class="icon hidden">‹ Back</button><button id="zoomIn" class="icon" aria-label="Zoom in">＋</button><button id="zoomOut" class="icon" aria-label="Zoom out">－</button><button id="pickRnd" class="icon">🎲 Surprise</button></div>
 </div>
 <div id="hud" class="hidden">
   <div class="hudTop">
@@ -325,7 +342,7 @@ const WOODS=[poly([[1090,775],[1290,745],[1420,760],[1480,900],[1560,1010],[1690
   poly([[850,1370],[1030,1440],[1150,1480],[1150,1700],[840,1700]])];
 const PARKTREES=poly([[1110,360],[1290,370],[1300,690],[1180,700],[1120,600],[1060,480]]);
 const FIELD=poly([[880,935],[1110,935],[1150,1080],[1140,1250],[1110,1380],[1000,1400],[870,1345],[880,1150]]);
-const SANDP=poly([[590,1120],[880,1120],[880,1260],[850,1330],[590,1330]]);
+const SANDP=poly([[670,1120],[880,1120],[880,1260],[850,1330],[670,1330]]);
 const inWoods=(x,z)=>inPoly(WOODS[0],x,z)||inPoly(WOODS[1],x,z);
 
 // paths (px polylines)
@@ -491,7 +508,10 @@ const JUNK=[
   ['bball','Stray Basketball','🏀',o=>{sp(o,0.13,0xe4772b,0,0.13,0,{t:0.015});},[['Hit the basketball','contact']]],
   ['bike','Kid\'s Bike','🚲',o=>{[-0.45,0.45].forEach(x=>{const t=part(new THREE.TorusGeometry(0.3,0.04,6,14),0x222222,par(o),x,0.05,0,0.015);t.rotation.x=Math.PI/2;});
      bx(o,0.95,0.06,0.06,0x2f80ed,0,0.07,0,{t:0.015});bx(o,0.5,0.06,0.06,0x2f80ed,0.15,0.07,0.12,{ry:0.6,t:0.015});o.cols.push({kind:'obb',node:par(o),lc:new V(0,0.08,0),h:new V(0.8,0.1,0.32),lq:new Q(),rest:0.3,snd:'metal'});},[['Hit the bike','contact']]],
-  ['chair','Lawn Chair','🪑',o=>{bx(o,0.55,0.05,0.5,0x3aa0a0,0,0.38,0,{part:'seat'});bx(o,0.55,0.6,0.05,0x3aa0a0,0,0.68,-0.27,{rx:-0.25});[[-0.25,0.2],[0.25,0.2],[-0.25,-0.2],[0.25,-0.2]].forEach(([x,z])=>cy(o,0.02,0.38,0xcccccc,x,0.19,z,{nocol:true,t:0.01}));},[['Hit the chair','contact'],['Hit the seat from above','top','seat']]],
+  ['chair','Lawn Chair','🪑',o=>{bx(o,0.8,0.07,0.7,0x3aa0a0,0,0.32,0,{part:'seat'});bx(o,0.8,0.62,0.06,0x3aa0a0,0,0.63,-0.38,{rx:-0.25});
+     [-0.36,0.36].forEach(x=>bx(o,0.08,0.27,0.7,0xcccccc,x,0.14,0,{part:'frame'}));
+     bx(o,0.8,0.27,0.08,0x3aa0a0,0,0.14,0.34,{part:'frame'});
+     [[-0.36,0.28],[0.36,0.28],[-0.36,-0.28],[0.36,-0.28]].forEach(([x,z])=>cy(o,0.025,0.3,0xcccccc,x,0.15,z,{nocol:true,t:0.01}));},[['Hit the chair','contact'],['Hit the seat from above','top','seat']]],
   ['cooler','Cooler','🧊',o=>{bx(o,0.7,0.4,0.42,0x2f6fd0,0,0.2,0);bx(o,0.72,0.07,0.44,0xffffff,0,0.43,0,{part:'lid'});},[['Hit the cooler','contact'],['Hit the lid','top','lid']]],
   ['marker','Path Marker','🪧',o=>{bx(o,0.12,1.1,0.12,0x6b4423,0,0.55,0);bx(o,0.4,0.25,0.04,0x2f5a3a,0,1.0,0.08,{nocol:true,t:0.015});},[['Hit the path marker','contact']]],
   ['rock','Big Rock','🪨',o=>{sp(o,0.6,0x8a8a86,0,0.25,0,{det:0,sc:[1.2,0.7,1],rest:0.45});},[['Hit the rock','contact'],['Hit the top of the rock','top']]],
@@ -521,6 +541,8 @@ function spotFree(hi,lx,lz,rad,okRoad){const [x,z]=localToWorld(hi,lx,lz);if(pat
   const pools=OBJS.find(o=>o.id==='pools');if(pools&&pools.members.some(m=>Math.hypot(x-m.c.x,z-m.c.z)<rad+5))return false;
   if(inPoly(FIELD,x,z)||inPoly(SANDP,x,z))return false;if(YARD.some(([yx,yz,yr,yh])=>yh!==hi&&Math.hypot(x-yx,z-yz)<rad+yr+0.6))return false;return true;}
 const YARD=[],DRIVES=[];const claim=(hi,lx,lz,r)=>{const [x,z]=localToWorld(hi,lx,lz);YARD.push([x,z,r,hi]);};
+function yardClear(hi,lx,lz,r){if(!spotFree(hi,lx,lz,r))return false;const [wx,wz]=localToWorld(hi,lx,lz);
+  return !YARD.some(([x,z,rad,owner])=>owner===hi&&Math.hypot(x-wx,z-wz)<rad+r);}
 const CARC=[0xd62828,0x2f80ed,0xf2f2f2,0x333333,0x9aa3a8,0x2e7d4f,0xf2c94c,0x6b3f8a,0x8b1e1e];
 function yards(){
   const cars=groupObj('cars','Any Parked Car','🚗',[{label:'Hit any parked car',type:'contact'},{label:'Break any car window',type:'brk',part:'glass'}],m=>[{label:'Hit this car',type:'contact'},{label:'Break this car\'s windshield',type:'brk',part:'glass'}]);
@@ -528,6 +550,9 @@ function yards(){
   const sheds=groupObj('sheds','Any Shed','🛖',[{label:'Hit any shed',type:'contact'}],m=>[{label:'Hit this shed',type:'contact'},{label:'Land a shot on the shed roof',type:'top'}]);
   const hoops=groupObj('hoops','Any Basketball Hoop','🏀',[{label:'Swish any hoop',type:'through',zones:[]}],m=>[{label:'Swish it through this hoop',type:'through',zones:[m.zone]},{label:'Hit the backboard',type:'contact',part:'board'}]);
   const fences=groupObj('fences','Back Fences','🪵',[],null);
+  const playsets=groupObj('playsets','Backyard Play Sets','🛝',[{label:'Hit any play set',type:'contact'},{label:'Hit a play set slide',type:'contact',part:'slide'}],m=>[{label:'Hit this play set',type:'contact'},{label:'Hit this slide',type:'contact',part:'slide'},{label:'Hit the platform from above',type:'top',part:'platform'}]);
+  const kiddie=groupObj('kiddie','Kiddie Pools','💦',[{label:'Splash into any kiddie pool',type:'through',zones:[]}],m=>[{label:'Splash into this kiddie pool',type:'through',zones:[m.zone]},{label:'Hit the pool rim',type:'contact',part:'rim'}]);
+  const gardens=groupObj('gardens','Vegetable Gardens','🥕',[{label:'Hit any garden bed',type:'contact',part:'bed'}],m=>[{label:'Hit this garden bed',type:'contact',part:'bed'},{label:'Land in this garden',type:'through',zones:[m.zone]}]);
   const bush=[],flowers=[0xff6fa8,0xffd23f,0xffffff,0xb07cff,0xff7a3d];
   HOUSEPOS.forEach((h,i)=>{const nm=houseName(i),hn=nm.charAt(0).toLowerCase()+nm.slice(1);MKEY='h'+i;
     const side=rnd()<0.5?1:-1;
@@ -563,21 +588,49 @@ function yards(){
         mergeVis(new THREE.SphereGeometry(0.36,10,6,0,Math.PI*2,0,Math.PI/2),0x2b2b2b,grills.cur,0,0.92,0,new THREE.Euler(),0.02);
         [0,2.1,4.2].forEach(a=>mergeVis(new THREE.CylinderGeometry(0.02,0.02,0.9,5),0x555555,grills.cur,Math.cos(a)*0.25,0.45,Math.sin(a)*0.25,new THREE.Euler(),0));
         grills.cols.push({kind:'sph',node:grills.cur,lc:new V(0,0.9,0),r:0.37,rest:0.45,snd:'metal'});endMember(grills,i);}}
+    const yardX=i%2?3.4:-3.4,yardZ=-9.3,kind=i%3;
+    if(yardClear(i,yardX,yardZ,kind===0?2.2:1.6)){
+      claim(i,yardX,yardZ,kind===0?2.4:1.8);
+      if(kind===0){
+        member(playsets,i,yardX,yardZ,0,`Play set behind the ${hn}`,2.5,2.3);
+        [ [-0.8,-0.55],[0.8,-0.55],[-0.8,0.55],[0.8,0.55] ].forEach(([x,z])=>cy(playsets,0.07,2.4,0x9a6a3c,x,1.2,z,{merge:1}));
+        bx(playsets,1.9,0.14,1.4,0xdca859,0,1.7,0,{part:'platform',merge:1});
+        bx(playsets,2,0.12,1.5,0x34865b,0,2.48,0,{merge:1});
+        bx(playsets,0.65,0.08,2.5,0xf2c94c,0,0.9,1.55,{rx:0.7,part:'slide',merge:1});
+        [-0.3,0.3].forEach(x=>bx(playsets,0.06,0.2,2.5,0xe4812b,x,0.94,1.55,{rx:0.7,merge:1}));
+        endMember(playsets,i);
+      }else if(kind===1){
+        const zn='pool'+kiddie.members.length;member(kiddie,i,yardX,yardZ,0,`Kiddie pool behind the ${hn}`,0.4,1);
+        cy(kiddie,0.95,0.18,0x43bde8,0,0.12,0,{nocol:true,merge:1});
+        cy(kiddie,0.83,0.02,0x86d8ed,0,0.22,0,{nocol:true,merge:1,t:0});
+        kiddie.cols.push({kind:'ring',node:kiddie.cur,lc:new V(0,0.23,0),ri:0.78,ro:0.96,hh:0.12,part:'rim',rest:0.3,snd:'plastic'});
+        zone(kiddie,zn,{r:0.76,h:0.35,y:0.27});kiddie.members[kiddie.members.length-1].zone=zn;kiddie.rules[0].zones.push(zn);endMember(kiddie,i);
+      }else{
+        const zn='garden'+gardens.members.length;member(gardens,i,yardX,yardZ,0,`Garden behind the ${hn}`,0.5,1.5);
+        bx(gardens,2.6,0.08,1.7,0x49392a,0,0.08,0,{nocol:true,merge:1,t:0});
+        [-0.84,0.84].forEach(z=>bx(gardens,2.8,0.3,0.12,0x96704b,0,0.22,z,{part:'bed',merge:1}));
+        [-1.34,1.34].forEach(x=>bx(gardens,0.12,0.3,1.8,0x96704b,x,0.22,0,{part:'bed',merge:1}));
+        for(let x=-0.85;x<=0.9;x+=0.85)for(let z=-0.42;z<=0.5;z+=0.9){
+          mergeVis(new THREE.ConeGeometry(0.22,0.5,5),0x4f9e38,gardens.cur,x,0.45,z,new THREE.Euler(),0);
+          gardens.cols.push({kind:'cyl',node:gardens.cur,lc:new V(x,0.45,z),r:0.16,hh:0.25,rest:0.1,snd:'leaf'});}
+        zone(gardens,zn,{w:2.4,h:0.55,d:1.5,y:0.34});gardens.members[gardens.members.length-1].zone=zn;endMember(gardens,i);
+      }
+    }
     // shed in a back corner
     const sx=rnd()<0.5?-4.3:4.3;
-    if(rnd()<0.45&&spotFree(i,sx,-10,1.8)){claim(i,sx,-10,1.9);member(sheds,i,sx,-10,0,`Shed behind the ${hn}`,3,1.8);const sc=[0xc0392b,0x7a8f5a,0xd8cfb8,0x6b7a8f][i%4];
+    if(rnd()<0.45&&yardClear(i,sx,-10,1.8)){claim(i,sx,-10,1.9);member(sheds,i,sx,-10,0,`Shed behind the ${hn}`,3,1.8);const sc=[0xc0392b,0x7a8f5a,0xd8cfb8,0x6b7a8f][i%4];
       bx(sheds,2.6,2.2,2.2,sc,0,1.1,0,{merge:1});bx(sheds,2.9,0.12,1.35,0x4a3f38,0,2.5,0.55,{rx:0.6,merge:1});bx(sheds,2.9,0.12,1.35,0x4a3f38,0,2.5,-0.55,{rx:-0.6,merge:1});
       mergeVis(new THREE.BoxGeometry(0.9,1.7,0.05),0x5b3d2e,sheds.cur,0,0.85,1.12,new THREE.Euler(),0);endMember(sheds,i);}
     // back fence, only the stretches that don't hit a path or another yard
     member(fences,i,0,0,0,'fence',1.2);const fz=-13;
     const segs=[];for(let x0=-7;x0<7;x0+=2)segs.push([x0+1,fz,0]);for(let z0=-5;z0>fz;z0-=2){segs.push([-7,z0-1,Math.PI/2]);segs.push([7,z0-1,Math.PI/2]);}
     const fc=[0xb88a5a,0xe8e2d4,0x8a6a4a][i%3];
-    segs.forEach(([lx,lz,ry])=>{if(!spotFree(i,lx,lz,0.2))return;claim(i,lx,lz,1);const e=new THREE.Euler(0,ry,0);
+    segs.forEach(([lx,lz,ry])=>{if(!yardClear(i,lx,lz,0.8))return;claim(i,lx,lz,1);const e=new THREE.Euler(0,ry,0);
       mergeVis(new THREE.BoxGeometry(2,0.12,0.06),fc,fences.cur,lx,0.45,lz,e,0);mergeVis(new THREE.BoxGeometry(2,0.12,0.06),fc,fences.cur,lx,1.0,lz,e,0);
       for(let t=-0.9;t<=0.91;t+=0.3){const px=lx+(ry?0:t),pz=lz+(ry?t:0);mergeVis(new THREE.BoxGeometry(0.1,1.2,0.04),fc,fences.cur,px,0.6,pz,e,0.012);}
       fences.cols.push({kind:'obb',node:fences.cur,lc:new V(lx,0.6,lz),h:new V(1,0.6,0.05),lq:new Q().setFromEuler(e),rest:0.3,snd:'wood'});});
     endMember(fences,i);});
-  [cars,grills,sheds,hoops,fences].forEach(o=>{o.cur=o.g;finalize(o);});MKEY='misc';
+  [cars,grills,sheds,hoops,fences,playsets,kiddie,gardens].forEach(o=>{o.cur=o.g;finalize(o);});MKEY='misc';
   bush.forEach(([x,y,z,r])=>STATIC.push({kind:'leaf',c:new V(x,y,z),r:r+0.1,snd:'leaf',obj:null,br:r+0.1}));
   fences.members=[];} // fences aren't a target
 function houseName(i){const street=i<14?'Morning Wind':i<20?'Mirror Light':i<29?'Gray Owl':i<39?'Crystal Spring':i<49?'Thunder Hill':i<56?'Sea Wind':'the south path';return`${WALLN[i%WALLN.length]} house on ${street}`;}
@@ -672,9 +725,9 @@ function buildWorld(){
    finalize(o);MKEY='misc';}
 
   // ---- playground (sand, slide, swings, dome) ----
-  addPad(WX(735),WZ(1225),24);
-  o=makeObj('sand','Playground Sand','🏖️',WX(735),WZ(1225),0,[{label:'Get it on the playground sand',type:'through',zones:['in']}],0);
-  zone(o,'in',{w:57,h:1.6,d:40,y:0.6});finalize(o);
+  addPad(WX(775),WZ(1225),24);
+  o=makeObj('sand','Playground Sand','🏖️',WX(775),WZ(1225),0,[{label:'Get it on the playground sand',type:'through',zones:['in']}],0);
+  zone(o,'in',{w:40,h:1.6,d:40,y:0.6});finalize(o);
   {const x=WX(690),z=WZ(1270);o=makeObj('slide','Playground Slide','🛝',x,z,0.6,[{label:'Hit the slide',type:'contact'},{label:'Roll under the platform',type:'through',zones:['under']},{label:'Hit the top of the platform',type:'top',part:'platform'}],0);
    [-0.5,0.5].forEach(x=>{cy(o,0.06,2.4,0x2e7bd6,x,1.2,-0.7,{part:'ladder'});cy(o,0.06,2.2,0x2e7bd6,x,1.1,0.55);});
    [0.45,0.95,1.45,1.95].forEach(y=>bx(o,1.0,0.06,0.06,0x2e7bd6,0,y,-0.7,{part:'ladder'}));
@@ -686,9 +739,28 @@ function buildWorld(){
    bx(o,5.4,0.14,0.14,0xd94141,0,3.0,0);
    [-1.1,1.1].forEach(x=>{bx(o,0.03,2.3,0.03,0x888888,x-0.35,1.85,0,{nocol:true,t:0.015});bx(o,0.03,2.3,0.03,0x888888,x+0.35,1.85,0,{nocol:true,t:0.015});bx(o,0.8,0.08,0.3,0x333333,x,0.65,0,{part:'seat'});});
    zone(o,'thru',{w:5.0,h:2.8,d:0.9,y:1.45});finalize(o);}
-  {const x=WX(650),z=WZ(1175);o=makeObj('dome','Climbing Dome','⛺',x,z,0,[{label:'Hit the dome',type:'contact'},{label:'Hit the top of the dome',type:'top'}],0);
-   part(new THREE.SphereGeometry(2.2,12,6,0,Math.PI*2,0,Math.PI/2),0xd94141,o.g,0,0,0,0.04);
-   o.cols.push({kind:'sph',node:o.g,lc:new V(0,0,0),r:2.2,rest:0.3,snd:'metal'});finalize(o);}
+  {const x=WX(700),z=WZ(1175);o=makeObj('dome','Climbing Dome','⛺',x,z,0,[{label:'Hit the dome bars',type:'contact'},{label:'Hit the top of the dome',type:'top'},{label:'Thread through the dome',type:'through',zones:['inside']}],0);
+   const ring=(n,r,y,offset=0)=>Array.from({length:n},(_,i)=>new V(Math.cos(i*2*Math.PI/n+offset)*r,y,Math.sin(i*2*Math.PI/n+offset)*r));
+   const base=ring(10,2.2,0.15),middle=ring(10,1.75,1.15,Math.PI/10),upper=ring(5,0.85,1.95);
+   const bar=(a,b,col)=>{const d=b.clone().sub(a),q=new Q().setFromUnitVectors(new V(0,1,0),d.clone().normalize()),center=a.clone().add(b).multiplyScalar(0.5),r=0.055;
+     mergeVis(new THREE.CylinderGeometry(r,r,d.length(),6),col,o.g,center.x,center.y,center.z,new THREE.Euler().setFromQuaternion(q),0.012);
+     o.cols.push({kind:'obb',node:o.g,lc:center,h:new V(r,d.length()/2,r),lq:q,part:'bar',rest:0.3,snd:'metal'});};
+   const loop=(pts,col)=>pts.forEach((p,i)=>bar(p,pts[(i+1)%pts.length],col));
+   loop(base,0xd94141);loop(middle,0xf2c94c);loop(upper,0x2f80ed);
+   base.forEach((p,i)=>{bar(p,middle[i],0xd94141);bar(p,middle[(i+9)%10],0xd94141);});
+   middle.forEach((p,i)=>bar(p,upper[Math.floor(i/2)],0x2f80ed));
+   upper.forEach(p=>bar(p,new V(0,2.3,0),0xf2c94c));
+   zone(o,'inside',{r:1.1,h:1.3,y:0.8});finalize(o);}
+  {const x=WX(825),z=WZ(1230);o=makeObj('seesaw','Playground Seesaw','⚖️',x,z,0.25,[{label:'Hit the seesaw',type:'contact'},{label:'Hit a seesaw seat',type:'contact',part:'seat'}],0);
+   bx(o,0.45,0.85,0.7,0xf2c94c,0,0.42,0);
+   bx(o,4.6,0.16,0.4,0x2f80ed,0,0.91,0,{rz:0.14,part:'board'});
+   [-2.05,2.05].forEach(s=>{bx(o,0.6,0.1,0.48,0xd94141,s,0.91+s*0.14,0,{part:'seat'});bx(o,0.07,0.45,0.45,0xf2c94c,s*0.7,1.12+s*0.1,0,{part:'handle'});});
+   finalize(o);}
+  {const x=WX(785),z=WZ(1300);o=makeObj('monkey','Monkey Bars','🐒',x,z,0.2,[{label:'Hit the monkey bars',type:'contact',part:'bar'},{label:'Go under the monkey bars',type:'through',zones:['under']}],0);
+   [-2.1,2.1].forEach(x=>[-0.85,0.85].forEach(z=>cy(o,0.065,2.4,0x47b34a,x,1.2,z,{part:'post'})));
+   [-0.85,0.85].forEach(z=>bx(o,4.4,0.12,0.12,0x2f80ed,0,2.45,z,{part:'bar'}));
+   for(let x=-1.7;x<=1.8;x+=0.85)bx(o,0.09,0.09,1.82,0xf2c94c,x,2.45,0,{part:'bar'});
+   zone(o,'under',{w:3.7,h:1.7,d:1.45,y:0.9});finalize(o);}
   [[790,1235],[775,1250],[805,1255]].forEach(([px,py])=>addTree(WX(px),WZ(py),1.6,1.2));
 
   {MKEY='cwall';const x=WX(835),z=WZ(1300);o=makeObj('cwall','Climbing Wall','🧗',x,z,faceAt(x,z,WX(1000),WZ(1250)),[],2.5);const zs=[];
@@ -812,7 +884,7 @@ const EMPTY=[];const near=p=>GRID.get(pkey(Math.floor(p.x/GC),Math.floor(p.z/GC)
 
 /* ---------- sound (Web Audio synth) ---------- */
 const SFX={ctx:null,on:true,last:new Map()};
-const MATSND={cars:'metal',grills:'metal',sheds:'wood',hoops:'metal',fences:'wood',cwall:'wood',cornhole:'wood',tire:'soft',houses:'wood',court:'metal',bench:'wood',trash1:'metal',trash2:'metal',psign:'wood',oak:'wood',picnic:'wood',goal:'metal',school:'wood',slide:'plastic',swings:'metal',dome:'metal',tramp:'boing',flamingo:'plastic',gnome:'plastic',mail:'metal',stop:'metal',soda:'can',pizza:'soft',pools:'plastic'};
+const MATSND={cars:'metal',grills:'metal',sheds:'wood',hoops:'metal',fences:'wood',playsets:'wood',kiddie:'plastic',gardens:'wood',cwall:'wood',cornhole:'wood',tire:'soft',houses:'wood',court:'metal',bench:'wood',trash1:'metal',trash2:'metal',psign:'wood',oak:'wood',picnic:'wood',goal:'metal',school:'wood',slide:'plastic',swings:'metal',dome:'metal',seesaw:'metal',monkey:'metal',tramp:'boing',flamingo:'plastic',gnome:'plastic',mail:'metal',stop:'metal',soda:'can',pizza:'soft',pools:'plastic'};
 function audioInit(){try{if(!SFX.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;SFX.ctx=new AC();
     SFX.master=SFX.ctx.createGain();SFX.master.gain.value=0.7;SFX.master.connect(SFX.ctx.destination);
     const n=SFX.ctx.sampleRate,b=SFX.ctx.createBuffer(1,n,n),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;SFX.noise=b;}
@@ -872,16 +944,25 @@ function inZone(z,p){if(!z)return false;if(z.kind==='cyl')return Math.abs(p.y-z.
   const l=tv.copy(p).sub(z.c).applyQuaternion(z.qi);return Math.abs(l.x)<=z.h.x&&Math.abs(l.y)<=z.h.y&&Math.abs(l.z)<=z.h.z;}
 
 /* ---------- game state ---------- */
-const G={phase:'setup',players:[],hole:1,holes:9,caller:0,turn:0,cur:0,target:null,rule:null,yaw:0,map:false,preview:null,power:0,charging:false,chargeT:0,flags:null,shotDir:new V(0,0,1),lastCall:null};
+const G={phase:'setup',players:[],hole:1,holes:9,caller:0,turn:0,cur:0,target:null,rule:null,modifier:null,lead:null,yaw:0,map:false,preview:null,power:0,charging:false,chargeT:0,flags:null,shotDir:new V(0,0,1),lastCall:null};
 const cp=()=>G.players[G.cur];
 
+const MODIFIERS={
+  bank:{label:'Bank off a nearby target',how:'On the scoring shot, hit the selected object before the target.'},
+  bounce:{label:'Bounce off a nearby target',how:'On the scoring shot, bounce on top of the selected object before the target.'},
+  path:{label:'Bounce on the path first',how:'Land on a path, then hit the target on that same shot (not the next swing).'}
+};
+const canScore=()=>!G.modifier||G.flags.prerequisite;
 const isTgt=c=>c.obj===G.target&&(G.targetSub==null||c.sub===G.targetSub)&&(!G.rule.part||c.part===G.rule.part);
+const isLead=c=>G.lead?c.obj&&c.obj.id===G.lead.id&&(G.lead.sub==null||c.sub===G.lead.sub):c.obj&&c.obj.id==='houses';
+function markFirstContact(f){if(f.prerequisite)return;f.prerequisite=true;updateHUD();toast(G.modifier==='path'?'Path bounce!':'First contact!','Now hit the target',1100);}
 function physStep(p,h){
   const pos=p.ball,v=p.vel,f=G.flags;let sup=null,supN=null;
   v.y-=9.8*h;if(f.curve&&f.air){const vx=v.x,vz=v.z;v.x+=-vz*f.curve*h;v.z+=vx*f.curve*h;}pos.addScaledVector(v,h);
   const gh=H(pos.x,pos.z)+(roadSurf(pos.x,pos.z)<0?0.1:0);
   let gi=null;
   if(pos.y<gh+R+0.02&&v.y<0.6){const N=groundN(pos.x,pos.z);pos.y=gh+R/N.y;const vn=v.dot(N);gi=groundInfo(pos);
+    if(G.modifier==='path'&&f.air&&vn< -0.1&&pathDist(pos.x,pos.z)<1.35&&roadSurf(pos.x,pos.z)>0)markFirstContact(f);
     if(vn<0&&-vn>1.5)hitSound('ground',gi.snd,-vn);
     if(vn<0){const iv=-vn;if(iv>1.0){v.addScaledVector(N,-1.36*vn);const k=Math.max(0.55,1-iv*0.035);const vt=v.clone().addScaledVector(N,-v.dot(N));v.addScaledVector(vt,k-1);}else v.addScaledVector(N,-vn);}
     sup='ground';supN=N;}
@@ -890,15 +971,16 @@ function physStep(p,h){
       if(pos.distanceToSquared(c.c)<c.r*c.r){const sp=v.length();v.multiplyScalar(Math.exp(-h*(1.1+sp*0.05)));
         v.x+=(Math.random()-0.5)*h*5;v.y+=(Math.random()-0.5)*h*5;v.z+=(Math.random()-0.5)*h*5;
         if(G.simT-(c.lt??-9)>0.4&&sp>2)hitSound(c,'leaf',sp);c.lt=G.simT;
-        if(f.t>0.05&&isTgt(c))f.contact=true;}
+        if(isTgt(c)&&canScore())f.contact=true;}
       continue;}
     if(c.off||Math.abs(pos.x-c.c.x)>c.br+R||Math.abs(pos.z-c.c.z)>c.br+R||Math.abs(pos.y-c.c.y)>c.br+R)continue;
     const hit=collide(c,pos);if(!hit)continue;
     pos.addScaledVector(hit.n,hit.pen);
     const vn=v.dot(hit.n);
-    if(c.glass&&-vn>6){if(c.obj&&c.obj.id==='cars')hitSound('alarm'+c.sub,'alarm',10);breakGlass(c);v.multiplyScalar(0.5);f.crash=true;if(isTgt(c)){f.broke=true;f.contact=true;}continue;} // smashed: keeps going at half speed
+    if(c.glass&&-vn>6){if(c.obj&&c.obj.id==='cars')hitSound('alarm'+c.sub,'alarm',10);breakGlass(c);v.multiplyScalar(0.5);f.crash=true;if(isTgt(c)&&canScore()){f.broke=true;f.contact=true;}if(G.modifier==='bank'&&!G.lead&&isLead(c))markFirstContact(f);continue;} // smashed: keeps going at half speed
     if(vn<0){let e=c.rest;if(-vn<(c.bouncy?0.45:0.8))e=0;v.addScaledVector(hit.n,-(1+e)*vn);if(-vn>1.2)hitSound(c,c.snd,-vn);if(c.obj&&c.obj.id==='cars'&&-vn>5)hitSound('alarm'+c.sub,'alarm',10);}
-    if(f.t>0.05&&isTgt(c)){f.contact=true;if(hit.n.y>0.6)f.top=true;}
+    if(isTgt(c)&&canScore()){f.contact=true;if(hit.n.y>0.6)f.top=true;}
+    if(isLead(c)&&vn< -0.3&&((G.modifier==='bank'&&c.kind!=='leaf')||(G.modifier==='bounce'&&hit.n.y>0.6)))markFirstContact(f);
     if(hit.n.y>0.55){sup=c;supN=hit.n;}
   }
   if(sup){let dec=2.6;
@@ -906,11 +988,13 @@ function physStep(p,h){
     const vn=v.dot(supN),vt=v.clone().addScaledVector(supN,-vn),s=vt.length();
     if(s>0){vt.multiplyScalar(Math.max(0,s-dec*h)/s);v.copy(vt).addScaledVector(supN,vn);}
   }else v.multiplyScalar(1-0.05*h);
-  if(G.rule.type==='through'&&G.rule.zones.some(n=>inZone(G.target.zones[n],pos)))f.through=true;
+  if(G.rule.type==='through'&&canScore()&&G.rule.zones.some(n=>inZone(G.target.zones[n],pos)))f.through=true;
   f.air=!sup;return sup;
 }
 function simStep(h){
-  const p=cp(),f=G.flags;f.t+=h;G.simT=(G.simT||0)+h;const sup=physStep(p,h),pos=p.ball;
+  const p=cp(),f=G.flags,n=Math.max(1,Math.ceil(p.vel.length()*h/R)),step=h/n;let sup;
+  for(let i=0;i<n;i++){f.t+=step;G.simT=(G.simT||0)+step;sup=physStep(p,step);}
+  const pos=p.ball;
   if(sup&&p.vel.length()<0.25){f.still+=h;if(f.still>0.2){p.vel.set(0,0,0);return endShot();}}else f.still=0;
   // if the ball has barely moved in the last half second and it's on or near the ground, call it stopped
   if(!f.chk){f.chk=pos.clone();f.chkT=f.t;}
@@ -921,7 +1005,7 @@ function simStep(h){
 
 /* ---------- visuals: balls, character, markers ---------- */
 const ballMeshes=[];
-function makeBall(i){const m=part(new THREE.IcosahedronGeometry(0.17,1),0xffffff,scene,0,0,0,0.03);m.castShadow=true;
+function makeBall(i){const m=part(new THREE.IcosahedronGeometry(R,1),0xffffff,scene,0,0,0,0.015);m.castShadow=true;
   const ring=new THREE.Mesh(new THREE.RingGeometry(0.26,0.38,20),new THREE.MeshBasicMaterial({color:PCOLORS[i]}));ring.rotation.x=-Math.PI/2;scene.add(ring);
   return{m,ring};}
 const coneGeo=new THREE.BufferGeometry();coneGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(9),3));
@@ -1087,14 +1171,14 @@ function startGame(){
   G.players=setupPlayers.map((sp,i)=>({name:(sp.name||'').trim()||('Player '+(i+1)),club:sp.club,prop:sp.prop,stance:sp.stance,arm:sp.arm,stats:{...sp.stats},color:PCOLORS[i],dark:new THREE.Color(PCOLORS[i]).multiplyScalar(0.6).getHex(),css:PCSS[i],
     ball:new V(START.x-0.6+i*0.45,H(START.x-0.6+i*0.45,START.z)+R,START.z),food:1,sips:0,eaten:0,won:false,prev:new V(),vel:new V(),strokes:0,done:false,card:[]}));
   G.players.forEach((p,i)=>{ballMeshes.push(makeBall(i));p.k=makeGolfer();dressKid(p);placeKid(p,p.ball,Math.atan2(-p.ball.x,-p.ball.z));});
-  G.hole=1;G.caller=0;G.lastCall=null;G.log=[];G.course=G.courseIdx!=null?loadCourses()[G.courseIdx]:null;if(G.course)G.holes=G.course.holes.length;
+  G.hole=1;G.caller=0;G.lastCall=null;G.modifier=null;G.lead=null;G.log=[];G.course=G.courseIdx!=null?loadCourses()[G.courseIdx]:null;if(G.course)G.holes=G.course.holes.length;
   show('setup',false);openCall();
 }
 
 /* ---------- calling a hole ---------- */
-let selObj=null;
+let selObj=null,pendingModifier=null,leadCandidates=[];
 function openCall(){
-  G.phase='call';G.map=false;G.preview=null;selObj=null;marker.visible=false;G.target=null;G.rule=null;showZones();
+  G.phase='call';G.map=false;G.preview=null;selObj=null;pendingModifier=null;leadCandidates=[];marker.visible=false;G.target=null;G.rule=null;G.modifier=null;G.lead=null;show('leadPins',false);show('leadQuick',false);showZones();
   if(G.course)return courseHole();
   show('hud',false);show('controls',false);show('call',true);
   const caller=G.players[G.caller];
@@ -1106,42 +1190,92 @@ function openCall(){
     b.onclick=()=>selectObj(o);grid.appendChild(b);});});
   showGrid();startPick();
 }
-function showGrid(){const caller=G.players[G.caller];selObj=null;G.targetSub=null;G.preview=null;G.target=null;G.rule=null;marker.visible=false;showZones();
+function showGrid(){const caller=G.players[G.caller];selObj=null;pendingModifier=null;leadCandidates=[];G.targetSub=null;G.preview=null;G.target=null;G.rule=null;G.modifier=null;G.lead=null;marker.visible=false;showZones();
   $('callTitle').textContent=G.players.length>1?`${caller.name}, pick a target`:'Pick a target';
   show('objGrid',true);show('ruleView',false);$('rndBtn').classList.remove('hidden');$('call').scrollTop=0;}
-function selectObj(o,sub=null){selObj=o;G.preview=o;G.target=o;G.targetSub=sub;G.rule=null;showZones();marker.visible=true;
+function selectObj(o,sub=null){selObj=o;pendingModifier=null;leadCandidates=[];G.preview=o;G.target=o;G.targetSub=sub;G.rule=null;G.modifier=null;G.lead=null;showZones();marker.visible=true;show('modifierView',false);show('leadView',false);show('ruleList',true);
   const m=sub!=null?o.members[sub]:null,rules=m?o.subRules(m):o.rules;
   $('callTitle').textContent=`${o.emoji} ${m?m.name:o.name}`;show('objGrid',false);show('ruleView',true);$('rndBtn').classList.add('hidden');$('call').scrollTop=0;
   const rl=$('ruleList');rl.innerHTML='';
   rules.forEach(r=>{const b=document.createElement('button');
     const how={contact:'Any touch counts, even a bounce.',through:'Ball has to get into or through the yellow zone.',top:'Ball has to hit the top surface. Any touch from above counts.',brk:'You have to actually smash the glass. Hit it hard.'}[r.type]||'';
     b.innerHTML=`⛳ ${esc(r.label)}<small>${how}</small>`;
-    b.onclick=()=>playRule(o,r);rl.appendChild(b);});}
-function startPick(){G.picking=true;const b=G.players[G.caller].ball;if(!G.pan||G.panHole!==G.hole){G.pan=new V(b.x,0,b.z);G.zoom=55;G.panHole=G.hole;}G.preview=null;G.target=null;G.targetSub=null;marker.visible=false;show('call',false);show('pickBar',true);
+    b.onclick=()=>selectRule(o,r);rl.appendChild(b);});}
+function selectRule(o,r){
+  pendingModifier=null;G.rule=r;show('ruleList',false);show('leadView',false);show('modifierView',true);
+  const list=$('modifierList');list.innerHTML='';
+  const options=[{key:null,label:'Just hit the target',how:'No extra challenge.'},...Object.entries(MODIFIERS).map(([key,m])=>({key,...m}))];
+  options.forEach(m=>{const b=document.createElement('button');b.innerHTML=`⛳ ${esc(m.label)}<small>${esc(m.how)}</small>`;
+    b.onclick=()=>m.key==='bank'||m.key==='bounce'?chooseLead(m.key):playRule(o,r,m.key);list.appendChild(b);});
+}
+const LEAD_RANGE=60;
+function nearbyLeads(){
+  const dest=tgt(G.target,G.players[G.caller].ball).c,candidates=[];
+  OBJS.forEach(o=>{const add=(sub,c,name)=>{if(o===G.target&&(G.targetSub==null||sub===G.targetSub))return;
+      const d=Math.hypot(c.x-dest.x,c.z-dest.z);if(d<=LEAD_RANGE)candidates.push({o,sub,c,name,d});};
+    if(o.members){const solid=new Set(o.cols.filter(c=>c.kind!=='leaf').map(c=>c.sub));
+      o.members.forEach((m,i)=>{if(solid.has(i))add(i,m.c,m.name);});}
+    else if(o.cols.some(c=>c.kind!=='leaf'))add(null,o.center,o.name);
+  });
+  return candidates.sort((a,b)=>a.d-b.d);
+}
+function chooseLead(modifier){
+  pendingModifier=modifier;leadCandidates=nearbyLeads();const list=$('leadList');list.innerHTML='';
+  if(!leadCandidates.length){pendingModifier=null;toast('No nearby targets','Pick a different target or skip the challenge',1600);return;}
+  $('callTitle').textContent=`${modifier==='bank'?'Bank':'Bounce'} off what?`;
+  leadCandidates.forEach(k=>{const b=document.createElement('button');b.innerHTML=`${k.o.emoji} ${esc(k.name)}<small>${k.d.toFixed(0)} m from the target</small>`;
+    b.onclick=()=>playRule(G.target,G.rule,modifier,{id:k.o.id,sub:k.sub});list.appendChild(b);});
+  show('modifierView',false);show('leadView',true);startLeadPick();
+}
+function startPick(){pendingModifier=null;leadCandidates=[];G.picking=true;const b=G.players[G.caller].ball;if(!G.pan||G.panHole!==G.hole){G.pan=new V(b.x,0,b.z);G.zoom=55;G.panHole=G.hole;}G.preview=null;G.target=null;G.targetSub=null;marker.visible=false;show('call',false);show('pickBar',true);show('pickBack',false);show('pickRnd',true);show('leadPins',false);show('leadQuick',false);
   $('pickTip').textContent=`Hole ${G.hole}${G.holes?' of '+G.holes:''}${G.players.length>1?' · '+G.players[G.caller].name+' calls it':''} · tap anything to target it`;}
-function endPick(){G.picking=false;show('pickBar',false);show('call',true);}
-$('pickBtn').onclick=startPick;$('pickRnd').onclick=()=>{endPick();$('rndBtn').onclick();};
+function startLeadPick(){G.picking=true;const c=tgt(G.target,G.players[G.caller].ball).c;G.pan=new V(c.x,0,c.z);G.zoom=40;show('call',false);show('pickBar',true);show('pickBack',true);show('pickRnd',false);show('leadPins',true);show('leadQuick',true);
+  $('pickTip').textContent=`${pendingModifier==='bank'?'Bank':'Bounce'}: tap a highlighted object`;
+  const chips=$('leadQuickList'),pins=$('leadPins');chips.innerHTML='';pins.innerHTML='';
+  leadCandidates.slice(0,4).forEach(k=>{const b=document.createElement('button');b.textContent=`${k.o.emoji} ${k.name.split(' behind the ')[0]}`;b.title=k.name;
+    b.onclick=()=>playRule(G.target,G.rule,pendingModifier,{id:k.o.id,sub:k.sub});chips.appendChild(b);});
+  leadCandidates.slice(0,12).forEach(k=>{const b=document.createElement('button');b.textContent=k.o.emoji;b.title=k.name;b.setAttribute('aria-label',`First contact: ${k.name}`);
+    b.onclick=()=>playRule(G.target,G.rule,pendingModifier,{id:k.o.id,sub:k.sub});pins.appendChild(b);});
+}
+function updateLeadPins(){if(!G.picking||!pendingModifier)return;camera.updateMatrixWorld();
+  const v=new V(),pins=$('leadPins').children,occupied=[];
+  for(let i=0;i<pins.length;i++){const b=pins[i],k=leadCandidates[i];v.copy(k.c).project(camera);
+    const x=(v.x+1)*innerWidth/2,y=(1-v.y)*innerHeight/2,visible=v.z>-1&&v.z<1&&x>25&&x<innerWidth-25&&y>30&&y<innerHeight-175&&occupied.every(([px,py])=>Math.hypot(px-x,py-y)>46);
+    b.style.display=visible?'':'none';if(visible){b.style.left=x+'px';b.style.top=y+'px';occupied.push([x,y]);}}
+}
+function endPick(){G.picking=false;show('pickBar',false);show('leadPins',false);show('leadQuick',false);show('call',true);}
+$('pickBtn').onclick=()=>pendingModifier?startLeadPick():startPick();
+$('pickBack').onclick=()=>{endPick();if(pendingModifier){pendingModifier=null;show('leadView',false);show('modifierView',true);$('callTitle').textContent=`${G.target.emoji} ${G.targetSub!=null?G.target.members[G.targetSub].name:G.target.name}`;}};
+$('allNearby').onclick=endPick;$('pickRnd').onclick=()=>{endPick();$('rndBtn').onclick();};
 $('zoomIn').onclick=()=>{G.zoom=Math.max(15,G.zoom/1.3);};$('zoomOut').onclick=()=>{G.zoom=Math.min(170,G.zoom*1.3);};
-function pickAt(sx,sy){const cands=[];OBJS.forEach(o=>{if(o.members){if(o.subRules)o.members.forEach((m,i)=>cands.push({o,sub:i,c:m.c}));}else if(o.rules.length)cands.push({o,sub:null,c:o.center});});
+function pickAt(sx,sy){const cands=pendingModifier?leadCandidates:[];if(!pendingModifier)OBJS.forEach(o=>{if(o.members){if(o.subRules)o.members.forEach((m,i)=>cands.push({o,sub:i,c:m.c}));}else if(o.rules.length)cands.push({o,sub:null,c:o.center});});
   let best=null,bd=48*48;const v=new V();for(const k of cands){v.copy(k.c).project(camera);if(v.z>1)continue;const x=(v.x+1)/2*innerWidth,y=(1-v.y)/2*innerHeight,d=(x-sx)**2+(y-sy)**2;if(d<bd){bd=d;best=k;}}
-  if(best){endPick();selectObj(best.o,best.sub);}else toast('Nothing there','Tap closer to a house or object',900);}
-function playRule(o,r){G.target=o;G.rule=r;G.lastCall=o.id+o.rules.indexOf(r);
+  if(best){endPick();if(pendingModifier)playRule(G.target,G.rule,pendingModifier,{id:best.o.id,sub:best.sub});else selectObj(best.o,best.sub);}
+  else toast('Nothing there',pendingModifier?'Tap a nearby object, or use the list':'Tap closer to a house or object',900);}
+function playRule(o,r,modifier=null,lead=null){if(G.picking)endPick();pendingModifier=null;leadCandidates=[];G.target=o;G.rule=r;G.modifier=modifier;G.lead=modifier?lead:null;G.lastCall=o.id+o.rules.indexOf(r)+modifier+(G.lead?G.lead.id+G.lead.sub:'');
   const list=G.targetSub!=null?o.subRules(o.members[G.targetSub]):o.rules,n=G.players.length,tee=G.players.reduce((a,p)=>a.add(p.ball),new V()).multiplyScalar(1/n);
-  G.log[G.hole-1]={id:o.id,sub:G.targetSub,ri:Math.max(0,list.findIndex(x=>x.label===r.label)),tee:[+tee.x.toFixed(2),+tee.z.toFixed(2)]};startHole();}
+  G.log[G.hole-1]={id:o.id,sub:G.targetSub,ri:Math.max(0,list.findIndex(x=>x.label===r.label)),modifier,lead:G.lead,tee:[+tee.x.toFixed(2),+tee.z.toFixed(2)]};startHole();}
 function courseHole(){ // replaying a saved course: same target, same rule, same tee spot
   const h=G.course.holes[G.hole-1],o=OBJS.find(x=>x.id===h.id);if(!o){toast('Missing target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
+  if((h.modifier==='bounce'&&!h.lead)||(h.lead&&!OBJS.some(x=>x.id===h.lead.id&&(h.lead.sub==null||x.members&&x.members[h.lead.sub])))){toast('Missing first target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
   const n=G.players.length;G.players.forEach((p,i)=>{p.ball.set(h.tee[0]+(i-(n-1)/2)*0.45,0,h.tee[1]);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);{const oc=o.members?o.members[h.sub??0].c:o.center;walkTo(p,Math.atan2(oc.x-p.ball.x,oc.z-p.ball.z));}});
   G.target=o;G.targetSub=h.sub??null;const list=G.targetSub!=null?o.subRules(o.members[G.targetSub]):o.rules,r=list[h.ri]||list[0];
   G.preview=o;marker.visible=true;show('hud',false);show('controls',false);show('call',false);
-  toast(`Hole ${G.hole} of ${G.holes}`,`${o.emoji} ${G.targetSub!=null?o.members[G.targetSub].name:o.name}: ${r.label}`,2200);
-  setTimeout(()=>{if(G.phase==='call')playRule(o,r);},2300);}
-$('backBtn').onclick=()=>{show('call',false);startPick();};
+  toast(`Hole ${G.hole} of ${G.holes}`,`${o.emoji} ${G.targetSub!=null?o.members[G.targetSub].name:o.name}: ${r.label}${MODIFIERS[h.modifier]?' · '+modifierText(h.modifier,h.lead):''}`,2200);
+  setTimeout(()=>{if(G.phase==='call')playRule(o,r,MODIFIERS[h.modifier]?h.modifier:null,h.lead||null);},2300);}
+$('backBtn').onclick=()=>{if(pendingModifier){pendingModifier=null;show('leadView',false);show('modifierView',true);$('callTitle').textContent=`${G.target.emoji} ${G.targetSub!=null?G.target.members[G.targetSub].name:G.target.name}`;return;}show('call',false);startPick();};
 $('rndBtn').onclick=()=>{const list=OBJS.filter(o=>o.rules.length&&o.rules.every(r=>r.type!=='through'||r.zones.length));let o,r,tries=0;
-  do{o=pick(list);r=pick(o.rules);tries++;}while(G.lastCall===o.id+o.rules.indexOf(r)&&tries<10);
+  do{o=pick(list);r=pick(o.rules);tries++;}while(G.lastCall===o.id+o.rules.indexOf(r)+'null'&&tries<10);
   playRule(o,r);toast('Surprise!',`${o.emoji} ${r.label}`,1600);};
 
+function modifierText(modifier,lead){
+  if(modifier==='path')return'Bounce on the path first';
+  if(modifier==='bank'&&!lead)return'Bank off a house first';
+  const o=OBJS.find(x=>x.id===lead.id),name=lead.sub!=null?o.members[lead.sub].name:o.name;
+  return`${modifier==='bank'?'Bank':'Bounce'} off ${name} first`;
+}
 let hcTimer;function holeCard(){$('hcK').textContent=`HOLE ${G.hole}${G.holes?' OF '+G.holes:''}`;$('hcR').textContent=G.rule.label;$('hcT').textContent=`${G.target.emoji} ${tgtName()}`;
-  $('hcH').textContent=HOWTXT[G.rule.type]||'';$('holeCard').classList.add('show');clearTimeout(hcTimer);hcTimer=setTimeout(()=>$('holeCard').classList.remove('show'),3400);try{setMarkerLabel();}catch(e){}}
+  $('hcH').textContent=(HOWTXT[G.rule.type]||'')+(G.modifier?' '+(G.modifier==='path'?MODIFIERS.path.how:modifierText(G.modifier,G.lead)+'.'):'');$('holeCard').classList.add('show');clearTimeout(hcTimer);hcTimer=setTimeout(()=>$('holeCard').classList.remove('show'),3400);try{setMarkerLabel();}catch(e){}}
 function startHole(){holeCard();
   show('call',false);show('hud',true);G.preview=null;showZones();marker.visible=true;
   G.players.forEach(p=>{p.strokes=0;p.done=false;p.won=false;});G.turn=G.caller;beginTurn();
@@ -1162,9 +1296,9 @@ const tgtName=()=>G.targetSub!=null?G.target.members[G.targetSub].name:G.target.
 const HOWTXT={contact:'Any touch counts, even a bounce.',through:'Get the ball into or through the yellow zone.',top:'Hit the top surface. Any touch from above counts.',brk:'Actually smash the glass. Hit it hard.'};
 function updateHUD(){
   if(!G.target)return;const p=cp();
-  $('hHole').textContent=G.hole;$('hCall').textContent=G.rule.label;$('hTgt').textContent=`${G.target.emoji} ${tgtName()}`;
+  $('hHole').textContent=G.hole;$('hCall').textContent=G.rule.label+(G.modifier?' · '+modifierText(G.modifier,G.lead):'');$('hTgt').textContent=`${G.target.emoji} ${tgtName()}`;
   const tc=tgt(G.target,p.ball).c,d=Math.hypot(tc.x-p.ball.x,tc.z-p.ball.z);
-  $('hSub').innerHTML=`<i style="background:${p.css}"></i>${esc(p.name)} · ${CLUBS[p.club].short} · stroke ${p.strokes+1} · ${d.toFixed(0)} m`;
+  $('hSub').innerHTML=`<i style="background:${p.css}"></i>${esc(p.name)} · ${CLUBS[p.club].short} · stroke ${p.strokes+1} · ${d.toFixed(0)} m${G.phase==='flight'&&G.flags.prerequisite&&G.modifier?' · first contact ✓':''}`;
 }
 
 /* ---------- swinging ---------- */
@@ -1186,7 +1320,7 @@ function swing(power,sw){
   const wob=dirErr,yaw=G.yaw+dirErr*DEG,ang=Math.max(2,p.loft*launchF)*DEG,
     s=pw*cl.v*(0.85+0.075*st.pow)*distF*(1-(p.loft-cl.base)*0.006);
   p.vel.set(Math.sin(yaw)*Math.cos(ang)*s,Math.sin(ang)*s,Math.cos(yaw)*Math.cos(ang)*s);
-  G.flags={contact:false,through:false,top:false,broke:false,t:0,still:0,wob,mis,sd:sh.sdDir,curve:sw?sw.curve:0,air:true};G.shotDir.set(Math.sin(yaw),0,Math.cos(yaw));
+  G.flags={contact:false,through:false,top:false,broke:false,prerequisite:!G.modifier,t:0,still:0,wob,mis,sd:sh.sdDir,curve:sw?sw.curve:0,air:true};G.shotDir.set(Math.sin(yaw),0,Math.cos(yaw));
   sfx('swing',pw);G.phase='flight';show('controls',false);showZone();{const K=p.k;placeKid(p,p.ball,G.yaw);K.base=K.g.rotation.y;K.swingFrom=K.clubPivot.rotation.z;K.swingT=0;}G.map=false;traceStart(p);
   $('meterFill').style.width='0%';
 }
@@ -1197,6 +1331,7 @@ function endShot(){
   if(ok){bump('holesWon');if(p.strokes===1)bump('aces');if(G.target.id==='gnome')bump('gnome');}
   if(ok){p.done=true;p.won=true;p.card[G.hole-1]=p.strokes;msg=p.strokes===1?'Ace!':pick(['Nailed it!','Called it!','Pure!','Money!']);sub=`${p.name} in ${p.strokes}`;}
   else{msg=pick(['Nope','Not quite','Keep swinging','Oof']);sub=`${p.strokes} down`+(f.mis?{thin:' · thinned it',fat:' · chunked it',shank:' · SHANK'}[f.mis]:Math.abs(f.wob)>f.sd*1.2?(f.wob>0?' · pulled it left':' · pushed it right'):'');}
+  if(!ok&&G.modifier&&!f.prerequisite)sub+=G.modifier==='path'?' · need a path landing first':' · need to hit the first target';
   if(f.crash&&!ok){msg='CRASH!';sub='Window down · '+sub;}
   if(ok)sfx('win');
   toast(msg,sub,ok?1600:1100);
@@ -1437,7 +1572,7 @@ function updateVisuals(dt){
 function loop(now){
   requestAnimationFrame(loop);const dt=Math.min(0.05,(now-last)/1000);last=now;T+=dt;updateShards(dt);
   if(G.phase==='flight'){acc+=dt;const h=1/240;while(acc>=h){acc-=h;simStep(h);if(G.phase!=='flight')break;}}else acc=0;
-  updateCamera(dt);updateVisuals(dt);{const f=camLook;const fx=Math.round(f.x),fz=Math.round(f.z);sun.target.position.set(fx,H(fx,fz),fz);sun.position.set(fx+SUNOFF.x,H(fx,fz)+SUNOFF.y,fz+SUNOFF.z);}renderer.render(scene,camera);
+  updateCamera(dt);updateLeadPins();updateVisuals(dt);{const f=camLook;const fx=Math.round(f.x),fz=Math.round(f.z);sun.target.position.set(fx,H(fx,fz),fz);sun.position.set(fx+SUNOFF.x,H(fx,fz)+SUNOFF.y,fz+SUNOFF.z);}renderer.render(scene,camera);
 }
 
 buildWorld();renderSetup();ctrlUI();requestAnimationFrame(loop);

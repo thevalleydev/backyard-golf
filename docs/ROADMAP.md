@@ -11,8 +11,8 @@ Add an optional on-screen fps/draw-call readout (hidden behind a long-press) to 
 
 ## 2. Hole modifiers (biggest fun-per-effort gap)
 Holes are still three verbs (hit / through / top) on different nouns. Let the caller stack a modifier:
-- Bank shot: "off the house, then the trash can" (ordered contact list)
-- "Must bounce on the path first" (ground-type contact before the target)
+- Bank shot: "off the house, then the trash can" (implemented for a chosen nearby object then the called target, on the same shot)
+- "Must bounce on the path first" (implemented as a path landing before the called target, on the same shot; top bounces off a chosen nearby object are also supported)
 - "Over the court fence" (must pass above a height/zone)
 - "No wedge this hole" / "off hand only" (temporarily changes club or damps stats)
 - Closest-to holes (no target; nearest ball after N shots wins)
