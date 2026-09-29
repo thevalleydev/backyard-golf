@@ -17,7 +17,7 @@
 - **No out of bounds, no penalty strokes, no stroke cap** (Brad's rules). The scorecard has "end this hole now" as a manual escape.
 - **Rule types:**
   - Hit it (any contact, optionally a specific part: trunk, branches, net, post, lid).
-  - Through/into a zone: sign-post gaps, under the table, goal mouth, climbing-wall holes, cornhole holes, tire swing, hoops, pools, sand, court.
+  - Through/into a zone: sign-post gaps, under the table, goal mouth, climbing-wall holes, cornhole holes, tire swing, hoops, pools, sand, court. Cornhole specifically requires the ball to drop through the board opening from above; rolling under the board does not count.
   - Hit the top surface (tabletop, lid, platform, shed roof). This replaced "stop on top", which was near impossible.
   - Break glass (house, car, school windows).
 - **Stats:** 6 points across Power, Accuracy, Consistency (0–4 each).

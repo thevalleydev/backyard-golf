@@ -125,6 +125,24 @@ console.log('courses');
 
 console.log('collisions');
 {const {d:d2,X:X2}=boot(),G2=X2.G;d2.getElementById('startBtn').click();
+ const boards=X2.OBJS.find(o=>o.id==='cornhole');X2.selectObj(boards);d2.querySelector('#ruleList button').click();d2.querySelector('#modifierList button').click();
+ const p=G2.players[G2.cur];let hole=boards.zones.c0;const at=(x,y,z)=>hole.c.clone().add(new THREE.Vector3(x,y,z).applyQuaternion(hole.q));
+ X2.swing(0.5);p.ball.copy(at(0,-0.15,-0.5));p.vel.copy(new THREE.Vector3(0,0,9).applyQuaternion(hole.q));
+ for(let i=0;i<25;i++)X2.simStep(1/240);
+ ok(!G2.flags.through,'rolling under a cornhole does not sink it');
+ G2.phase='aim';X2.swing(0.5);p.ball.copy(at(0,0.42,0));p.vel.copy(new THREE.Vector3(0,-20,0).applyQuaternion(hole.q));
+ for(let i=0;i<16;i++)X2.simStep(1/240);
+ ok(G2.flags.through,'ball dropping through the opening scores');
+ G2.phase='aim';X2.swing(0.5);p.ball.copy(at(0.2,0.42,0));p.vel.copy(new THREE.Vector3(0,-20,0).applyQuaternion(hole.q));
+ for(let i=0;i<16;i++)X2.simStep(1/240);
+ ok(!G2.flags.through,'ball clipping the board next to the opening does not score');
+ hole=boards.zones.c1;G2.phase='aim';X2.swing(0.5);p.ball.copy(at(0,-0.15,-0.5));p.vel.copy(new THREE.Vector3(0,0,9).applyQuaternion(hole.q));
+ for(let i=0;i<25;i++)X2.simStep(1/240);
+ ok(!G2.flags.through,'rolling under the opposite board does not score');
+ G2.phase='aim';X2.swing(0.5);p.ball.copy(at(0,0.42,0));p.vel.copy(new THREE.Vector3(0,-20,0).applyQuaternion(hole.q));
+ for(let i=0;i<16;i++)X2.simStep(1/240);
+ ok(G2.flags.through,'dropping through the opposite board scores');}
+{const {d:d2,X:X2}=boot(),G2=X2.G;d2.getElementById('startBtn').click();
  const court=X2.OBJS.find(o=>o.id==='court');X2.selectObj(court);[...d2.querySelectorAll('#ruleList button')][2].click();d2.querySelector('#modifierList button').click();
  const fence=court.cols.find(c=>c.part==='fence'&&c.h.x>1),normal=new THREE.Vector3(0,0,1).applyQuaternion(fence.q),p=G2.players[G2.cur];
  const shot=(speed,offset)=>{X2.swing(0.5);p.ball.copy(fence.c).addScaledVector(normal,-offset);p.vel.copy(normal).multiplyScalar(speed);X2.simStep(1/240);return{contact:G2.flags.contact,forward:p.vel.dot(normal)};};
