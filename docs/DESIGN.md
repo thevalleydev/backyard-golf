@@ -37,7 +37,7 @@
   - Sideways drift = push/pull; a bowed flick = hook/slice (sideways force while airborne). Accuracy damps both.
   - Brad's feedback that shaped this: the earlier version measured flick *speed* for power and used a small pad. It "didn't translate", and the backswing wasn't shown live because of a bug. Distance-based power fixed it.
 - **Button:** hold, release on an oscillating meter.
-- **Phone:** real swing via gyroscope `rotationRate` (backswing, then a reversal on the same axis; power from peak angular speed). Blocked inside the claude.ai viewer; needs HTTPS hosting.
+- **Phone:** tap to arm, then take the phone back and swing it through its starting position. Gyroscope rotation on the takeback axis drives the live meter and golfer's club. A short flick cannot fire a shot: the backswing must cover at least 35° over 180 ms, followed by a through-swing past the start. Power comes primarily from backswing distance, with a tempo adjustment for through-swing speed. Requires motion permission and HTTPS.
 
 ## Tuning values worth knowing
 

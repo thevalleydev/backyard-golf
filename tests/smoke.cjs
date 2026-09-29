@@ -61,6 +61,25 @@ console.log('swipe');
  const full=med(200,12),half=med(100,12),lazy=med(200,60);
  ok(full>half*1.6,`full pull beats half pull (${full.toFixed(1)} vs ${half.toFixed(1)} m)`);ok(full>lazy,`snappy beats lazy flick (${full.toFixed(1)} vs ${lazy.toFixed(1)} m)`);}
 
+console.log('phone motion');
+{let now=9000;w.performance.now=()=>now;G.phase='aim';G.ctrl='phone';
+ const btn=d.getElementById('swingBtn'),p=G.players[G.cur],strokes=p.strokes;
+ const arm=()=>btn.dispatchEvent(new w.Event('pointerdown',{bubbles:true}));
+ const motion=(beta,gamma=0)=>{now+=20;const e=new w.Event('devicemotion');e.rotationRate={alpha:0,beta,gamma};w.dispatchEvent(e);};
+ arm();motion(950);motion(950);motion(-950);motion(-950);
+ ok(G.phase==='aim'&&p.strokes===strokes,'fast phone flick cannot fire a shot');
+ arm();motion(230);for(let i=0;i<12;i++)motion(230);
+ motion(0,1200);
+ ok(G.motion&&G.motion.angle>45&&G.motion.angle<65,'backswing integrates one fixed gyro axis');
+ X.updateVisuals(0.02);
+ ok(parseFloat(d.getElementById('meterFill').style.width)>45&&p.k.clubPivot.rotation.z<p.k.addr-1,
+   'phone backswing tracks live meter and golfer club');
+ for(let i=0;i<5;i++)motion(-280);
+ ok(G.phase==='aim'&&p.strokes===strokes,'reversing before the starting position does not shoot');
+ for(let i=0;i<10;i++)motion(-280);
+ ok(G.phase==='flight'&&p.strokes===strokes+1,'full backswing and through-swing fires exactly once');
+}
+
 console.log('courses');
 {const {d:d2,X:X2}=boot();const G2=X2.G;d2.getElementById('startBtn').click();
  X2.selectObj(X2.OBJS.find(o=>o.id==='court'));d2.querySelector('#ruleList button').click();d2.querySelector('#modifierList button').click();
