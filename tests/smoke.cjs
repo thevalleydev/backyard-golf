@@ -1,21 +1,32 @@
-// Headless smoke test. Loads index.html in jsdom with a stubbed WebGL renderer and three@0.128 from npm,
+// Headless smoke test. Imports game modules, bundles them for jsdom with a stubbed WebGL renderer,
 // builds the world, plays through the real game functions, and checks invariants that have broken before
 // (golfer in scene, school footprint, roads above terrain, swipe power ordering, course logging).
 // It cannot see pixels: anything visual still needs a human on a phone.
 const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path');const THREE=require('three');
-const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-const src=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const EXPORTS='G,OBJS,TREES,GLASS,HL,CLOUDS,SFX,ghosts,audioInit,swing,simStep,stepGolfer,updateVisuals,updateOcclusion,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
+const {build}=require('esbuild');
+const html=fs.readFileSync(path.join(__dirname,'..','app.html'),'utf8');
+async function run(){
+const threeExports=Object.keys(THREE).filter(k=>/^[A-Za-z_$][\w$]*$/.test(k))
+  .map(k=>`export const ${k}=window.THREE.${k};`).join('\n');
+const bundle=await build({
+  entryPoints:[path.join(__dirname,'entry.js')],bundle:true,format:'iife',globalName:'__x',
+  write:false,platform:'browser',target:'es2022',
+  plugins:[{name:'three-test-stub',setup(b){
+    b.onResolve({filter:/^three$/},()=>({path:'three',namespace:'stub'}));
+    b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:threeExports,loader:'js'}));
+  }}]
+});
+const src=bundle.outputFiles[0].text;
 let fails=0;const ok=(c,m)=>{console.log((c?'  ok  ':'  FAIL')+'  '+m);if(!c)fails++;};
-function boot(){
-  const dom=new JSDOM(html.replace(/<script src=[^>]+><\/script>/,'').replace(/<script>[\s\S]*?<\/script>/,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'https://localhost/'});
+function boot(storage={}){
+  const dom=new JSDOM(html.replace(/<script type="module"[^>]*><\/script>/,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'https://localhost/'});
   const w=dom.window;
+  Object.entries(storage).forEach(([key,value])=>w.localStorage.setItem(key,value));
   THREE.WebGLRenderer=function(){this.shadowMap={};this.domElement=w.document.createElement('canvas');this.setPixelRatio=()=>{};this.setSize=()=>{};this.render=()=>{};};
   w.THREE=THREE;
   w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:100})},{get:(t,k)=>k in t?t[k]:()=>{},set:(t,k,v)=>{t[k]=v;return true}});
   w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLElement.prototype.setPointerCapture=()=>{};w.requestAnimationFrame=()=>{};
-  // the game is one IIFE; inject an export right before it closes (the LAST "})();" in the script)
-  w.eval(src.replace(/\}\)\(\);\s*$/,`window.__x={${EXPORTS}};})();`));
+  w.eval(src+'\nwindow.__x=__x;');
   return {w,d:w.document,X:w.__x};
 }
 const fly=X=>{let n=0;while(X.G.phase==='flight'&&n++<6000)X.simStep(1/240);};
@@ -24,6 +35,11 @@ console.log('world');
 const t0=Date.now();const {w,d,X}=boot();const G=X.G;
 ok(Date.now()-t0<8000,`builds in ${Date.now()-t0} ms`);
 ok(X.TREES.length>500,`${X.TREES.length} trees`);ok(X.HL.length>50,`${X.HL.length} houses`);
+{const players=JSON.stringify([{name:'Old Player',club:'nine',hand:'R'}]);
+ const courses=JSON.stringify([{name:'Old Course',holes:[{id:'court',ri:0,tee:[0,0]}]}]);
+ const old=boot({byg_players:players,byg_courses:courses});
+ ok(old.X.setupPlayers[0].name==='Old Player'&&old.X.setupPlayers[0].prop==='beer','legacy players load with their original storage key');
+ ok(old.X.loadCourses()[0].holes[0].id==='court'&&old.w.localStorage.getItem('byg_courses')===courses,'legacy courses load without changing storage format');}
 const byId=id=>X.OBJS.find(o=>o.id===id);
 ['court','school','cars','cwall','cornhole','tire','trees','houses','pools','playsets','kiddie','gardens','slide','swings','dome','seesaw','monkey'].forEach(id=>ok(!!byId(id),`object ${id}`));
 ['playsets','kiddie','gardens'].forEach(id=>{const o=byId(id);ok(o.members.length>=3,`${id}: ${o.members.length} yard targets`);ok(o.cols.length>0,`${id} has colliders`);});
@@ -256,3 +272,5 @@ console.log('shot challenges');
 }
 
 console.log(fails?`\n${fails} failing`:'\nall good');process.exit(fails?1:0);
+}
+run().catch(error=>{console.error(error);process.exitCode=1;});

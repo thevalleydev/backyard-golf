@@ -2,8 +2,8 @@
 
 In priority order. Each step should end with `npm test` green and Brad playing it on his phone.
 
-## 0. Split into modules (no behavior change)
-See CLAUDE.md. Vite + ES modules, three pinned at 0.128. Port the smoke test to import modules directly instead of injecting exports into the IIFE.
+## 0. Split into modules (implemented; phone playtest pending)
+Vite + strictly checked TypeScript modules, three pinned at 0.128, and an imported-module smoke test replace the inline IIFE in the candidate `app.html`. Shared config, geometry/map data, terrain, collision and shot model have no browser globals; world construction, rendering, audio, game simulation/golfer, sensors/input, UI and loop are TypeScript modules. Run the smoke suite, typecheck and build; have Brad play a hole on his phone before changing game behavior or switching the published site. The root `index.html` still serves the old game for branch-based Pages; the new Pages workflow only deploys on manual dispatch after switching Pages Source to GitHub Actions.
 
 ## 1. Playtest pass
 Brad plus friends play a real round. Collect: phone performance (fps, heat), swipe feel, camera annoyances, targets that are impossible or trivial, anything confusing.

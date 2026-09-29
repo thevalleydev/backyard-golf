@@ -2,13 +2,22 @@
   "name": "backyard-golf",
   "version": "0.1.0-alpha",
   "private": true,
-  "description": "One-handed, call-your-own-hole neighborhood golf. Three.js, single page.",
+  "type": "module",
+  "description": "One-handed, call-your-own-hole neighborhood golf.",
   "scripts": {
-    "serve": "npx --yes http-server -p 8080 -c-1 .",
+    "serve": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
+    "preview": "vite preview --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
     "test": "node tests/smoke.cjs"
   },
   "devDependencies": {
+    "@types/three": "0.128.0",
+    "esbuild": "^0.28.2",
     "jsdom": "^22.1.0",
-    "three": "0.128.0"
+    "three": "0.128.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
   }
 }

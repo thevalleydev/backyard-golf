@@ -13,20 +13,20 @@ Read this whole file before changing anything. Then read `docs/ROADMAP.md` for w
 
 ## Current state (0.1 alpha)
 
-Everything lives in **one file: `index.html`** (~1,450 lines: CSS, HTML, and one big IIFE of JavaScript). Three.js **r128** from cdnjs, loaded as a global `THREE` (UMD). No build step, no modules, no dependencies at runtime.
+The published branch entry `index.html` remains the original single-file game (Three.js **r128** from cdnjs). The modular candidate is `app.html` plus `src/`: Vite bundles Three.js r128 from npm and publishes `dist/index.html` only when Pages Source switches to Actions and the workflow is manually dispatched. All application code in `src/` is strictly checked TypeScript, including world construction (`src/world.ts`) and UI/turns (`src/ui.ts`). The imported-module smoke suite covers gameplay and storage compatibility, not rendered pixels or real phone controls.
 
 It works end to end: setup → call a hole by tapping the map → aim → swipe to swing → physics → scoring → next hole → final scorecard → save/replay courses.
 
-The smoke test passes (`npm test`), but it can't see pixels. Visual/feel issues have only ever been found by Brad on his phone.
+The imported-module smoke test passes (`npm test`), but it can't see pixels. Visual/feel issues have only ever been found by Brad on his phone.
 
-### First job: split the file (recommended before any big feature)
+### First job: playtest the modular candidate (before any big feature)
 
-The single file has been edited by search-and-replace for weeks. Several real bugs came from that (the golfer was accidentally deleted from the scene; the school walls got shifted off their windows by a botched string slice). Move to:
+The original single file was edited by search-and-replace for weeks. Several real bugs came from that (the golfer was accidentally deleted from the scene; the school walls got shifted off their windows by a botched string slice). The first split is complete in `src/`; the finer-grained layout below remains a longer-term goal:
 
 ```
 src/
-  main.js            boot, loop
-  config.js          CLUBS, tuning constants, colors
+  main.ts            boot, loop
+  config.ts          CLUBS, tuning constants, colors
   render/            renderer, toon material + gradient map, lights/shadows, merge + fade, instanced trees/glass
   world/             terrain (rawH/H/meshH/pads), map data (px polylines & polygons), roads, paths, houses, yards, objects, junk
   physics/           collide(), physStep(), simStep(), groundInfo(), spatial grid
@@ -37,9 +37,9 @@ src/
   audio/             Web Audio synth (sfx)
 ```
 
-Use Vite (vanilla JS is fine; TS optional). Keep three at **0.128** until you've checked the breaking changes (`LuminanceFormat` for the toon gradient, `Quaternion.invert`, `instanceColor`, geometry APIs). Upgrading is fine later, just not in the same change as the split.
+Keep three at **0.128** until you've checked the breaking changes (`LuminanceFormat` for the toon gradient, `Quaternion.invert`, `instanceColor`, geometry APIs). Upgrading is fine later, just not in the same change as the split.
 
-Do the split as a **pure move** first (no behavior change), run the smoke test, and have Brad play one hole before touching behavior.
+The modular candidate preserves gameplay and storage keys; run the smoke test and build, and have Brad play one hole before touching behavior.
 
 ## Architecture (what's in index.html, top to bottom)
 
@@ -76,16 +76,17 @@ Do the split as a **pure move** first (no behavior change), run the smoke test, 
 - **New group targets:** `groupObj` + `member(...)` / `endMember(...)` per member, set `o.subRules`. Colliders get `sub` and `fk` (fade key) automatically.
 - **Rule types:** `contact` (any touch, optional `part`), `through` (ball enters zone), `top` (touch with normal.y > 0.6), `brk` (break glass on target). Add new types in `physStep` flags + `endShot`.
 - **Merging:** merged visuals can't be moved or hidden individually. That's why fading works per key (`FADEG[key]`). If something needs to animate, use `{nomerge:true}` or `part()`.
-- **The test harness injects exports** by replacing the **last** `})();` in the script. There are other IIFEs (the toon gradient), so don't change that closing line's shape until the module split removes the need.
+- **The test harness imports ES modules** through `tests/entry.js`, bundled by esbuild for jsdom. It does not patch the original IIFE.
 - **Timers:** gameplay uses `setTimeout` for turn transitions. The smoke test drives physics with `simStep` directly.
 - **Phone motion sensors are blocked inside the claude.ai artifact viewer.** Swipe works everywhere. Real HTTPS hosting is needed for gyro.
 
 ## Running
 
 ```
-npm install
-npm run serve     # http://localhost:8080  (phone on same Wi-Fi: http://<your-ip>:8080; gyro needs HTTPS)
+npm ci
+npm run dev       # open /app.html; gyro needs HTTPS
 npm test          # headless smoke test (jsdom + three@0.128)
+npm run build     # strict TS check + Pages production bundle in dist/
 ```
 
 ## Definition of done for any change
