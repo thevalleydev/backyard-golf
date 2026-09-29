@@ -1168,8 +1168,8 @@ function startGame(){
   resetGlass();
   try{localStorage.setItem('byg_players',JSON.stringify(setupPlayers));}catch(e){}
   ballMeshes.forEach(b=>{scene.remove(b.m);scene.remove(b.ring);});ballMeshes.length=0;clearGolfers();
-  G.players=setupPlayers.map((sp,i)=>({name:(sp.name||'').trim()||('Player '+(i+1)),club:sp.club,prop:sp.prop,stance:sp.stance,arm:sp.arm,stats:{...sp.stats},color:PCOLORS[i],dark:new THREE.Color(PCOLORS[i]).multiplyScalar(0.6).getHex(),css:PCSS[i],
-    ball:new V(START.x-0.6+i*0.45,H(START.x-0.6+i*0.45,START.z)+R,START.z),food:1,sips:0,eaten:0,won:false,prev:new V(),vel:new V(),strokes:0,done:false,card:[]}));
+  G.players=setupPlayers.map((sp,i)=>{const x=START.x+teeOffset(i,setupPlayers.length);return{name:(sp.name||'').trim()||('Player '+(i+1)),club:sp.club,prop:sp.prop,stance:sp.stance,arm:sp.arm,stats:{...sp.stats},color:PCOLORS[i],dark:new THREE.Color(PCOLORS[i]).multiplyScalar(0.6).getHex(),css:PCSS[i],
+    ball:new V(x,H(x,START.z)+R,START.z),food:1,sips:0,eaten:0,won:false,prev:new V(),vel:new V(),strokes:0,done:false,card:[]};});
   G.players.forEach((p,i)=>{ballMeshes.push(makeBall(i));p.k=makeGolfer();dressKid(p);placeKid(p,p.ball,Math.atan2(-p.ball.x,-p.ball.z));});
   G.hole=1;G.caller=0;G.lastCall=null;G.modifier=null;G.lead=null;G.log=[];G.course=G.courseIdx!=null?loadCourses()[G.courseIdx]:null;if(G.course)G.holes=G.course.holes.length;
   show('setup',false);openCall();
@@ -1258,7 +1258,7 @@ function playRule(o,r,modifier=null,lead=null){if(G.picking)endPick();pendingMod
 function courseHole(){ // replaying a saved course: same target, same rule, same tee spot
   const h=G.course.holes[G.hole-1],o=OBJS.find(x=>x.id===h.id);if(!o){toast('Missing target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
   if((h.modifier==='bounce'&&!h.lead)||(h.lead&&!OBJS.some(x=>x.id===h.lead.id&&(h.lead.sub==null||x.members&&x.members[h.lead.sub])))){toast('Missing first target','Skipping this hole',1200);G.hole++;return G.hole>G.holes?showFinal():openCall();}
-  const n=G.players.length;G.players.forEach((p,i)=>{p.ball.set(h.tee[0]+(i-(n-1)/2)*0.45,0,h.tee[1]);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);{const oc=o.members?o.members[h.sub??0].c:o.center;walkTo(p,Math.atan2(oc.x-p.ball.x,oc.z-p.ball.z));}});
+  const n=G.players.length;G.players.forEach((p,i)=>{p.ball.set(h.tee[0]+teeOffset(i,n),0,h.tee[1]);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);{const oc=o.members?o.members[h.sub??0].c:o.center;placeKid(p,p.ball,Math.atan2(oc.x-p.ball.x,oc.z-p.ball.z));}});
   G.target=o;G.targetSub=h.sub??null;const list=G.targetSub!=null?o.subRules(o.members[G.targetSub]):o.rules,r=list[h.ri]||list[0];
   G.preview=o;marker.visible=true;show('hud',false);show('controls',false);show('call',false);
   toast(`Hole ${G.hole} of ${G.holes}`,`${o.emoji} ${G.targetSub!=null?o.members[G.targetSub].name:o.name}: ${r.label}${MODIFIERS[h.modifier]?' · '+modifierText(h.modifier,h.lead):''}`,2200);
@@ -1339,15 +1339,22 @@ function endShot(){
   setTimeout(()=>{const next=()=>{G.turn=(G.cur+1)%G.players.length;beginTurn();};const out=settleHole();
     if(out.length&&G.players.some(q=>!q.done)){toast(`${out.join(' & ')} ${out.length>1?'are':'is'} out`,'Already a stroke over',1300);setTimeout(next,1400);}else next();},ok?1700:1250);
 }
+const TEE_SPACING=1.8;
+const teeOffset=(i,n)=>(i-(n-1)/2)*TEE_SPACING;
 function teeUp(o){ // everyone restarts from one spot a few steps off the last target, on the side the winner came from
   const from=G.players[G.caller].ball.clone(),m=tgt(o,from),c=m.c,d=new V(from.x-c.x,0,from.z-c.z);if(d.lengthSq()<1)d.set(0,0,1);d.normalize();
-  let r=m.r+3;const spot=new V(),probe=new V();
+  const side=new V(d.z,0,-d.x),n=G.players.length,yaw=Math.atan2(-d.x,-d.z);
+  let r=m.r+3;const spot=new V(),ball=new V();
   for(let i=0;i<24;i++,r+=1.2){const a=i<12?0:(i%2?1:-1)*0.6,dx=d.x*Math.cos(a)-d.z*Math.sin(a),dz=d.x*Math.sin(a)+d.z*Math.cos(a);
     const x=Math.max(XMIN+5,Math.min(XMAX-5,c.x+dx*r)),z=Math.max(ZMIN+5,Math.min(ZMAX-5,c.z+dz*r));spot.set(x,H(x,z)+R,z);
-    let blocked=false;for(const k of near(spot)){if(k.kind==='leaf'||k.off)continue;if(collide(k,spot)||collide(k,probe.set(x,spot.y+0.6,z))||collide(k,probe.set(x+0.8,spot.y+0.6,z))||collide(k,probe.set(x-0.8,spot.y+0.6,z))){blocked=true;break;}}
-    if(!blocked&&groundInfo(spot)!==WATERI)break;}
-  const side=new V(d.z,0,-d.x),n=G.players.length;
-  G.players.forEach((p,i)=>{p.ball.copy(spot).addScaledVector(side,(i-(n-1)/2)*0.45);p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);walkTo(p,Math.atan2(-d.x,-d.z));});
+    const clear=G.players.every((p,j)=>{ball.copy(spot).addScaledVector(side,teeOffset(j,n));ball.y=H(ball.x,ball.z)+R;
+      if(ball.x<XMIN+2||ball.x>XMAX-2||ball.z<ZMIN+2||ball.z>ZMAX-2||groundInfo(ball)===WATERI)return false;
+      const addr=addressOf(p,ball,yaw).pos;
+      for(const point of [ball,new V(addr.x,addr.y+0.8,addr.z),new V(addr.x,addr.y+1.3,addr.z)])
+        for(const k of near(point))if(k.kind!=='leaf'&&!k.off&&collide(k,point))return false;
+      return true;});
+    if(clear)break;}
+  G.players.forEach((p,i)=>{p.ball.copy(spot).addScaledVector(side,teeOffset(i,n));p.ball.y=H(p.ball.x,p.ball.z)+R;p.vel.set(0,0,0);placeKid(p,p.ball,yaw);});
 }
 // Once someone holes out in N, anyone who has already taken N strokes can't tie: they lose the hole at N+1 and stop playing it.
 function settleHole(){const won=G.players.filter(p=>p.won);if(!won.length)return[];const best=Math.min(...won.map(p=>p.card[G.hole-1])),out=[];

@@ -5,7 +5,7 @@
 const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path');const THREE=require('three');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const EXPORTS='G,OBJS,TREES,GLASS,HL,swing,simStep,updateVisuals,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,roadSurf,pathDist,PATHCURVES,scene,H';
+const EXPORTS='G,OBJS,TREES,GLASS,HL,swing,simStep,updateVisuals,selectObj,nearbyLeads,pickAt,updateCamera,camera,courseHole,teeUp,near,collide,roadSurf,pathDist,PATHCURVES,scene,H';
 let fails=0;const ok=(c,m)=>{console.log((c?'  ok  ':'  FAIL')+'  '+m);if(!c)fails++;};
 function boot(){
   const dom=new JSDOM(html.replace(/<script src=[^>]+><\/script>/,'').replace(/<script>[\s\S]*?<\/script>/,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'https://localhost/'});
@@ -50,6 +50,19 @@ ok(G.players.every(p=>p.k&&p.k.g.parent),'every golfer is in the scene');
 X.selectObj(byId('school'));[...d.querySelectorAll('#ruleList button')][1].click();d.querySelector('#modifierList button').click();
 ok(G.phase==='aim','hole starts');ok(d.getElementById('hCall').textContent==='Break a school window','HUD headline is the rule');
 X.swing(0.6);fly(X);ok(G.phase!=='flight','shot resolves');
+
+console.log('multiplayer tees');
+{const {d:d2,X:X2}=boot();d2.getElementById('addP').click();d2.getElementById('addP').click();d2.getElementById('startBtn').click();
+ const players=X2.G.players,spacing=()=>Math.min(...players.flatMap((p,i)=>players.slice(i+1).map(q=>Math.hypot(p.k.g.position.x-q.k.g.position.x,p.k.g.position.z-q.k.g.position.z))));
+ const clear=()=>players.every(p=>!X2.near(p.ball).some(c=>c.kind!=='leaf'&&!c.off&&X2.collide(c,p.ball))&&
+   ![0.8,1.3].some(y=>{const point=p.k.g.position.clone().add(new THREE.Vector3(0,y,0));return X2.near(point).some(c=>c.kind!=='leaf'&&!c.off&&X2.collide(c,point));}));
+ ok(players.length===4&&spacing()>1.5,'four golfers stand apart on the first hole');
+ ok(clear(),'first tee keeps all four balls and golfers clear of obstacles');
+ const court=X2.OBJS.find(o=>o.id==='court');X2.teeUp(court);
+ ok(spacing()>1.5&&players.every(p=>!p.k.dest),'four golfers immediately stand apart at the next tee');
+ ok(clear(),'new tees keep every ball and golfer clear of obstacles');
+ X2.G.course={holes:[{id:'court',sub:null,ri:0,tee:[players[0].ball.x+2.7,players[0].ball.z]}]};X2.G.hole=1;X2.courseHole();
+ ok(spacing()>1.5&&players.every(p=>!p.k.dest),'saved-course replay immediately spaces the golfers');}
 
 console.log('swipe');
 {const zone=d.getElementById('swingZone');let now=5000;w.performance.now=()=>now;
