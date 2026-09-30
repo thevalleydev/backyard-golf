@@ -83,6 +83,12 @@ h2.display{font-size:30px;margin:0 0 10px}
 .grid button{padding:7px 4px;font-size:12.5px;line-height:1.15;box-shadow:0 3px 0 var(--line)}
 .saveRow{display:flex;gap:6px;margin:10px 0 4px}.saveRow input{flex:1;min-width:0;font:inherit;font-size:15px;color:var(--ink);background:var(--paper);border:3px solid var(--line);border-radius:10px;padding:6px 10px}
 #courseSel{font:inherit;font-size:15px;color:var(--ink);background:var(--paper);border:3px solid var(--line);border-radius:10px;padding:5px 8px;max-width:220px}
+#roomPanel input{width:100%;min-width:0;font:inherit;color:var(--ink);background:var(--paper);border:3px solid var(--line);border-radius:10px;padding:8px;margin:4px 0 8px}
+#roomPanel label{display:block;margin-top:8px}
+#roomPanel .roomActions{display:flex;gap:8px}
+#roomPanel .roomActions button{flex:1}
+#roomPlayers{padding-left:22px;line-height:1.8}
+#roomStatus{color:var(--muted);min-height:1.5em}
 .secHead{grid-column:1/-1;font-size:13px;color:var(--muted);margin:6px 0 -2px}
 .grid button span{display:block;font-size:22px;margin-bottom:2px}
 .grid button.on{background:var(--paper2);outline:3px solid var(--accent);outline-offset:-1px}
@@ -191,6 +197,32 @@ td.tot{font-family:'Luckiest Guy','Arial Black',Impact,sans-serif;font-weight:40
       <p class="blurb" id="ctrlBlurb" style="margin:-4px 0 8px"></p>
     </div>
     <button id="startBtn" class="big">Tee off</button>
+    <button id="roomOpen" class="ghost hidden" style="margin-top:12px">Online rooms (preview)</button>
+  </div>
+</div>
+
+<div id="roomModal" class="overlay hidden">
+  <div id="roomPanel" class="panel">
+    <h2 class="display">Online rooms</h2>
+    <p class="tag">Room lobby and turns are live. Shots and scores are not synchronized yet; use Tee off for local play.</p>
+    <p id="roomStatus" role="status"></p>
+    <div id="roomEntry">
+      <label for="roomUrl">Room server URL</label><input id="roomUrl" type="url" autocomplete="url" placeholder="wss://your-service.onrender.com">
+      <label for="roomName">Your name</label><input id="roomName" maxlength="12" autocomplete="nickname" placeholder="Player">
+      <label for="roomCode">Join code (leave blank to create)</label><input id="roomCode" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="ABC123">
+      <div class="roomActions"><button id="roomCreate">Create room</button><button id="roomJoin">Join room</button></div>
+      <button id="roomReconnect" class="ghost hidden">Reconnect to saved room</button>
+    </div>
+    <div id="roomLobby" class="hidden">
+      <h3>Room <span id="roomShare"></span></h3>
+      <p class="blurb">Share this code and the game link with friends. Each player joins on their own device.</p>
+      <ol id="roomPlayers"></ol>
+      <p id="roomTurn"></p>
+      <button id="roomStart" class="big hidden">Start room</button>
+      <button id="roomNext" class="ghost hidden">Demo: advance turn</button>
+      <button id="roomLeave" class="ghost">Leave room</button>
+    </div>
+    <button id="roomClose" class="ghost">Back to setup</button>
   </div>
 </div>
 

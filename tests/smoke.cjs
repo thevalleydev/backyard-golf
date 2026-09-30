@@ -10,7 +10,7 @@ const threeExports=Object.keys(THREE).filter(k=>/^[A-Za-z_$][\w$]*$/.test(k))
   .map(k=>`export const ${k}=window.THREE.${k};`).join('\n');
 const bundle=await build({
   entryPoints:[path.join(__dirname,'entry.js')],bundle:true,format:'iife',globalName:'__x',
-  write:false,platform:'browser',target:'es2022',
+  write:false,platform:'browser',target:'es2022',define:{'import.meta.env.VITE_ROOM_URL':'""'},
   plugins:[{name:'three-test-stub',setup(b){
     b.onResolve({filter:/^three$/},()=>({path:'three',namespace:'stub'}));
     b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:threeExports,loader:'js'}));
@@ -34,6 +34,39 @@ const fly=X=>{let n=0;while(X.G.phase==='flight'&&n++<6000)X.simStep(1/240);};
 console.log('world');
 const t0=Date.now();const {w,d,X}=boot();const G=X.G;
 ok(Date.now()-t0<8000,`builds in ${Date.now()-t0} ms`);
+{
+ const sockets=[];
+ class RoomSocket{
+   static OPEN=1;
+   constructor(url){this.url=url;this.readyState=0;this.sent=[];this.listeners={};sockets.push(this);}
+   addEventListener(type,listener){(this.listeners[type]??=[]).push(listener);}
+   emit(type,data){for(const listener of this.listeners[type]??[])listener({data});}
+   send(payload){this.sent.push(JSON.parse(payload));}
+   close(){this.readyState=3;this.emit('close');}
+ }
+ w.WebSocket=RoomSocket;
+ d.getElementById('roomOpen').click();
+ d.getElementById('roomUrl').value='wss://rooms.example.test/';
+ d.getElementById('roomName').value='Test Player';
+ d.querySelector('#holesSeg [data-h="3"]').click();
+ d.getElementById('roomCreate').click();
+ sockets[0].readyState=1;sockets[0].emit('open');
+ ok(sockets[0].sent[0].type==='create'&&sockets[0].sent[0].name==='Test Player'&&sockets[0].sent[0].config.holes===3,'room creation sends player identity and selected hole count');
+ const room={code:'AB12CD',status:'lobby',hostId:'player-1',players:[{id:'player-1',name:'Test Player',connected:true}],currentPlayerId:null,hole:1,holes:9};
+ sockets[0].emit('message',JSON.stringify({type:'room',room,you:{id:'player-1',token:'secret-token'}}));
+ ok(d.getElementById('roomShare').textContent==='AB12CD'&&d.getElementById('roomPlayers').textContent.includes('Test Player'),'room update shows shared lobby');
+ d.getElementById('roomStart').click();
+ ok(sockets[0].sent[1].type==='start'&&sockets[0].sent[1].token==='secret-token','host can start room');
+ sockets[0].close();
+ d.getElementById('roomReconnect').click();
+ sockets[1].readyState=1;sockets[1].emit('open');
+ ok(sockets[1].sent[0].type==='join'&&sockets[1].sent[0].token==='secret-token','room reconnect uses saved token');
+ sockets[1].emit('message',JSON.stringify({type:'room',room,you:{id:'player-1',token:'secret-token'}}));
+ d.getElementById('roomLeave').click();
+ ok(!w.localStorage.getItem('byg_room'),'leaving clears reconnect credentials');
+ d.getElementById('roomClose').click();
+ d.querySelector('#holesSeg [data-h="9"]').click();
+}
 ok(X.TREES.length>500,`${X.TREES.length} trees`);ok(X.HL.length>50,`${X.HL.length} houses`);
 {const players=JSON.stringify([{name:'Old Player',club:'nine',hand:'R'}]);
  const courses=JSON.stringify([{name:'Old Course',holes:[{id:'court',ri:0,tee:[0,0]}]}]);

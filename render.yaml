@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: backyard-golf-rooms
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build:server
+    startCommand: npm run start:server
+    healthCheckPath: /healthz
+    envVars:
+      - key: CLIENT_ORIGIN
+        value: https://thevalleydev.github.io

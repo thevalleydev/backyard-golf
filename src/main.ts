@@ -4,6 +4,7 @@ import { CLOUDS, H, START, buildWorld, groundN, tgt, updateShards } from './worl
 import { SW, motionTick, updateOcclusion } from './input.ts';
 import { ctrlUI, initSetup, renderSetup, updateHUD, updateLeadPins } from './ui.ts';
 import { shotModel } from './shot.ts';
+import { initRooms } from './rooms.ts';
 
 
 /* ---------- camera & loop ---------- */
@@ -62,5 +63,5 @@ function loop(now:number){
   updateCamera(dt);updateLeadPins();updateVisuals(dt);{const f=camLook;const fx=Math.round(f.x),fz=Math.round(f.z);sun.target.position.set(fx,H(fx,fz),fz);sun.position.set(fx+SUNOFF.x,H(fx,fz)+SUNOFF.y,fz+SUNOFF.z);}renderer.render(scene,camera);
 }
 
-buildWorld();initSetup();renderSetup();ctrlUI();requestAnimationFrame(loop);
+buildWorld();initSetup();renderSetup();ctrlUI();initRooms(() => G.holes);requestAnimationFrame(loop);
 export { T, acc, camLook, camPos, dl, dp, hudTick, last, loop, updateCamera, updateVisuals };
