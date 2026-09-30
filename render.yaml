@@ -3,6 +3,7 @@ services:
     name: backyard-golf-rooms
     runtime: node
     plan: free
+    region: ohio
     buildCommand: npm ci --include=dev && npm run build:server
     startCommand: npm run start:server
     healthCheckPath: /healthz

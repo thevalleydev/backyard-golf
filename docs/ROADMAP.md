@@ -29,7 +29,7 @@ Store modifiers in the course log so saved courses replay them.
 GitHub Pages already serves the game over HTTPS, enabling browser motion permissions. Add a manifest and service worker if offline play or home-screen installation is needed.
 
 ## 5. Online multiplayer
-The first milestone is a WebSocket room lobby with create/join, reconnect, and shared demo turns. It does not yet connect the playable golf simulation: the optional server shot/result messages are peer-reported and must not be treated as verified scoring. Next, move browser-dependent physics and rules into headless shared modules, seed gameplay randomness, and make the server own shot outcomes, scoring, and turns. Everyone then plays a real round on their own phone. The Pages client remains static while a separate service (such as Render) hosts live rooms.
+The first milestone is live on Render: a WebSocket room lobby with create/join, reconnect, and shared demo turns. It does not yet connect the playable golf simulation: the optional server shot/result messages are peer-reported and must not be treated as verified scoring. Next, move browser-dependent physics and rules into headless shared modules, seed gameplay randomness, and make the server own shot outcomes, scoring, and turns. Everyone then plays a real round on their own phone. The Pages client remains static while Render hosts live rooms.
 
 ## 6. More maps and a map pipeline
 The current map was traced by hand from a satellite screenshot (px polylines and polygons in `world/`). Generalize:
